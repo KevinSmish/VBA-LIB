@@ -1,12 +1,12 @@
-Attribute VB_Name = "УчетМонет"
-' Модуль учета монет из драгоценных металлов
+Attribute VB_Name = "РЈС‡РµС‚РњРѕРЅРµС‚"
+' РњРѕРґСѓР»СЊ СѓС‡РµС‚Р° РјРѕРЅРµС‚ РёР· РґСЂР°РіРѕС†РµРЅРЅС‹С… РјРµС‚Р°Р»Р»РѕРІ
 '
 ' ------------------------------------------
-' (C) KVN v.1.1 от 31.05.2017
+' (C) KVN v.1.1 РѕС‚ 31.05.2017
 ' ------------------------------------------
 
 ' ***********************************************************************************
-' Комментируем нужную строку в зависимости от того, на чьей стороне запускаем макрос.
+' РљРѕРјРјРµРЅС‚РёСЂСѓРµРј РЅСѓР¶РЅСѓСЋ СЃС‚СЂРѕРєСѓ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РѕРіРѕ, РЅР° С‡СЊРµР№ СЃС‚РѕСЂРѕРЅРµ Р·Р°РїСѓСЃРєР°РµРј РјР°РєСЂРѕСЃ.
 #Const KIND_OF_INSTANCE = "MAIN"
 '#Const KIND_OF_INSTANCE = "DO"
 ' ***********************************************************************************
@@ -56,11 +56,11 @@ Function GetUserName() As String
 End Function
 'JSON
 '{
-'   "firstName": "Иван",
-'   "lastName": "Иванов",
+'   "firstName": "РРІР°РЅ",
+'   "lastName": "РРІР°РЅРѕРІ",
 '   "address": {
-'       "streetAddress": "Московское ш., 101, кв.101",
-'       "city": "Ленинград",
+'       "streetAddress": "РњРѕСЃРєРѕРІСЃРєРѕРµ С€., 101, РєРІ.101",
+'       "city": "Р›РµРЅРёРЅРіСЂР°Рґ",
 '       "postalCode": 101101
 '   },
 '   "phoneNumbers": [
@@ -76,15 +76,15 @@ Function CreateJSON(rw As Integer) As String
     Dim fName, i
     Dim Email_Body
     
-    kvnNames_GetCell("В_наличии!Статус", rw).Value = "оформляется"
+    kvnNames_GetCell("Р’_РЅР°Р»РёС‡РёРё!РЎС‚Р°С‚СѓСЃ", rw).Value = "РѕС„РѕСЂРјР»СЏРµС‚СЃСЏ"
     
     Email_Body = ""
     
-    fName = kvnNames_GetProp("ПутьКФайлуJSON") & "S_" & ActiveWorkbook.Sheets("Настройки").Range("D8").Value & ".json" ' ID монеты
+    fName = kvnNames_GetProp("РџСѓС‚СЊРљР¤Р°Р№Р»СѓJSON") & "S_" & ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D8").Value & ".json" ' ID РјРѕРЅРµС‚С‹
     Open fName For Output As #1
     Print #1, "{"
     For i = 8 To 14
-        tmp = FormString(ActiveWorkbook.Sheets("Настройки").Range("A" & i).Value, ActiveWorkbook.Sheets("Настройки").Range("D" & i).Value, i = 14)
+        tmp = FormString(ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("A" & i).Value, ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D" & i).Value, i = 14)
         If i <= 12 Then Email_Body = Email_Body & tmp & "%0D%0A"
         Print #1, tmp
     Next i
@@ -92,8 +92,8 @@ Function CreateJSON(rw As Integer) As String
     Close #1
     
 #If KIND_OF_INSTANCE = "DO" Then
-    Email_Subject = "Монета №" & ActiveWorkbook.Sheets("Настройки").Range("D8").Value & " реализована"
-    Email_Send_To = kvnNames_GetProp("КомуПосылатьИнфОПродаже")
+    Email_Subject = "РњРѕРЅРµС‚Р° в„–" & ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D8").Value & " СЂРµР°Р»РёР·РѕРІР°РЅР°"
+    Email_Send_To = kvnNames_GetProp("РљРѕРјСѓРџРѕСЃС‹Р»Р°С‚СЊРРЅС„РћРџСЂРѕРґР°Р¶Рµ")
     
     Email_Body = Replace(Email_Body, Chr(34), "'")
     Mail_Object = "mailto:" & Email_Send_To & "?subject=" & Email_Subject & " &body=" & Email_Body
@@ -102,16 +102,16 @@ Function CreateJSON(rw As Integer) As String
     ShellExecute 0&, vbNullString, Mail_Object, vbNullString, vbNullString, vbNormalFocus
 #End If
     
-    CreateJSON = "Данные о монете переданы. Файл " & fName
+    CreateJSON = "Р”Р°РЅРЅС‹Рµ Рѕ РјРѕРЅРµС‚Рµ РїРµСЂРµРґР°РЅС‹. Р¤Р°Р№Р» " & fName
 End Function
 Sub CopyToSale(rw As Integer)
     Dim off
     
-    kvnNames_GetCell("В_наличии!Статус", rw).Value = "продано"
+    kvnNames_GetCell("Р’_РЅР°Р»РёС‡РёРё!РЎС‚Р°С‚СѓСЃ", rw).Value = "РїСЂРѕРґР°РЅРѕ"
     Range("A" & rw & ":V" & rw).Select
     Selection.Copy
     
-    kvnNames_GetSheet("ИмяЛистаПродано").Select                             ' Перешли на лист "Продано"
+    kvnNames_GetSheet("РРјСЏР›РёСЃС‚Р°РџСЂРѕРґР°РЅРѕ").Select                             ' РџРµСЂРµС€Р»Рё РЅР° Р»РёСЃС‚ "РџСЂРѕРґР°РЅРѕ"
     Range("A3").Select
     off = 0
     While (ActiveCell.Offset(off, 0).Value <> "")
@@ -126,33 +126,33 @@ Sub CopyToSale(rw As Integer)
     off = ActiveCell.row
     Application.CutCopyMode = False
     
-    Range("W" & off).Value = ActiveWorkbook.Sheets("Настройки").Range("D12").Value        ' Дата реализации
+    Range("W" & off).Value = ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D12").Value        ' Р”Р°С‚Р° СЂРµР°Р»РёР·Р°С†РёРё
     Range("X" & off & ":AA" & off).Select
     Selection.FillDown
     
-    Range("AB" & off).Value = ActiveWorkbook.Sheets("Настройки").Range("D9").Value        ' Продал
-    Range("AC" & off).Value = ActiveWorkbook.Sheets("Настройки").Range("D10").Value       ' Покупатель
-    Range("AD" & off).Value = ActiveWorkbook.Sheets("Настройки").Range("D11").Value       ' Контакт
+    Range("AB" & off).Value = ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D9").Value        ' РџСЂРѕРґР°Р»
+    Range("AC" & off).Value = ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D10").Value       ' РџРѕРєСѓРїР°С‚РµР»СЊ
+    Range("AD" & off).Value = ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D11").Value       ' РљРѕРЅС‚Р°РєС‚
         
     Range("AE" & off).Select
     Selection.FillDown
     
-    kvnNames_GetSheet("ИмяЛиста_РаспРеализ").Select
-    Range("D1").Value = ActiveWorkbook.Sheets("Настройки").Range("D12").Value             ' Дата
-    Range("C5").Value = ActiveWorkbook.Sheets("Настройки").Range("D8").Value              ' ID монеты
-    Range("D32").Value = ActiveWorkbook.Sheets("Настройки").Range("D9").Value             ' Продал
+    kvnNames_GetSheet("РРјСЏР›РёСЃС‚Р°_Р Р°СЃРїР РµР°Р»РёР·").Select
+    Range("D1").Value = ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D12").Value             ' Р”Р°С‚Р°
+    Range("C5").Value = ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D8").Value              ' ID РјРѕРЅРµС‚С‹
+    Range("D32").Value = ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D9").Value             ' РџСЂРѕРґР°Р»
 
 End Sub
-Sub ПродажаМонеты_Sub(FlagFromJSON As Boolean)
-Attribute ПродажаМонеты_Sub.VB_ProcData.VB_Invoke_Func = " \n14"
+Sub РџСЂРѕРґР°Р¶Р°РњРѕРЅРµС‚С‹_Sub(FlagFromJSON As Boolean)
+Attribute РџСЂРѕРґР°Р¶Р°РњРѕРЅРµС‚С‹_Sub.VB_ProcData.VB_Invoke_Func = " \n14"
     Dim idx_Spr_UserName, cUserName, idx, numDO
     Dim idx_SheetName_Retail, idx_Retail_ID, rw As Integer, mes
     Dim r1, r2, CoinID
     
     If FlagFromJSON Then
-        kvnNames_GetSheet("ИмяЛиста_В_наличии").Select
-        CoinID = ActiveWorkbook.Sheets("Настройки").Range("D8").Value
-        kvnNames_FindValue("В_наличии!УникНомерМонеты", CoinID).Select
+        kvnNames_GetSheet("РРјСЏР›РёСЃС‚Р°_Р’_РЅР°Р»РёС‡РёРё").Select
+        CoinID = ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D8").Value
+        kvnNames_FindValue("Р’_РЅР°Р»РёС‡РёРё!РЈРЅРёРєРќРѕРјРµСЂРњРѕРЅРµС‚С‹", CoinID).Select
         rw = ActiveCell.row
     Else
         rw = ActiveCell.row
@@ -160,46 +160,46 @@ Attribute ПродажаМонеты_Sub.VB_ProcData.VB_Invoke_Func = " \n14"
     
 #If KIND_OF_INSTANCE = "DO" Then
     If ThisWorkbook.Name = ActiveWorkbook.Name Then
-        MsgBox ("Макрос запускается на активной книге БД Монет")
+        MsgBox ("РњР°РєСЂРѕСЃ Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ РЅР° Р°РєС‚РёРІРЅРѕР№ РєРЅРёРіРµ Р‘Р” РњРѕРЅРµС‚")
         Exit Sub
     End If
 #End If
     
-    idx_SheetName_Retail = kvnNames_GetProp("ИмяЛиста_В_наличии")
+    idx_SheetName_Retail = kvnNames_GetProp("РРјСЏР›РёСЃС‚Р°_Р’_РЅР°Р»РёС‡РёРё")
     If ActiveSheet.Name <> idx_SheetName_Retail Then
-        MsgBox ("Макрос формирования документов по проданным монетам запускается с листа '" & idx_SheetName_Retail & "'!")
+        MsgBox ("РњР°РєСЂРѕСЃ С„РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РґРѕРєСѓРјРµРЅС‚РѕРІ РїРѕ РїСЂРѕРґР°РЅРЅС‹Рј РјРѕРЅРµС‚Р°Рј Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ СЃ Р»РёСЃС‚Р° '" & idx_SheetName_Retail & "'!")
         Exit Sub
     End If
     
     idx_Spr_UserName = kvnNames_GetProp("idx_Spr_UserName")
     cUserName = GetUserName()
     If IsError(Application.Match(cUserName, Range(idx_Spr_UserName), 0)) = True Then
-        MsgBox ("К сожалению, у Вас нет прав на формирование документов.")
+        MsgBox ("Рљ СЃРѕР¶Р°Р»РµРЅРёСЋ, Сѓ Р’Р°СЃ РЅРµС‚ РїСЂР°РІ РЅР° С„РѕСЂРјРёСЂРѕРІР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚РѕРІ.")
         Exit Sub
     End If
     
     idx = Application.Match(cUserName, Range(idx_Spr_UserName), 0)
     numDO = Application.WorksheetFunction.Index(Range(kvnNames_GetProp("idx_Spr_DO_for_UserName")), idx, 0)
     
-    If kvnNames_GetCell("В_наличии!Статус", rw).Value <> kvnNames_GetProp("Статус_ВНаличии") Then
-        MsgBox ("Для запуска нужно стоять на строке с монетой со статусом 'в наличии'!")
+    If kvnNames_GetCell("Р’_РЅР°Р»РёС‡РёРё!РЎС‚Р°С‚СѓСЃ", rw).Value <> kvnNames_GetProp("РЎС‚Р°С‚СѓСЃ_Р’РќР°Р»РёС‡РёРё") Then
+        MsgBox ("Р”Р»СЏ Р·Р°РїСѓСЃРєР° РЅСѓР¶РЅРѕ СЃС‚РѕСЏС‚СЊ РЅР° СЃС‚СЂРѕРєРµ СЃ РјРѕРЅРµС‚РѕР№ СЃРѕ СЃС‚Р°С‚СѓСЃРѕРј 'РІ РЅР°Р»РёС‡РёРё'!")
         Exit Sub
     End If
     
-    If kvnNames_GetCell("В_наличии!МестоХранения", rw).Value = kvnNames_GetProp("НаименованиеХранилища") Then
-        MsgBox ("Продажа монеты из хранилища невозможна!")
+    If kvnNames_GetCell("Р’_РЅР°Р»РёС‡РёРё!РњРµСЃС‚РѕРҐСЂР°РЅРµРЅРёСЏ", rw).Value = kvnNames_GetProp("РќР°РёРјРµРЅРѕРІР°РЅРёРµРҐСЂР°РЅРёР»РёС‰Р°") Then
+        MsgBox ("РџСЂРѕРґР°Р¶Р° РјРѕРЅРµС‚С‹ РёР· С…СЂР°РЅРёР»РёС‰Р° РЅРµРІРѕР·РјРѕР¶РЅР°!")
         Exit Sub
     End If
     
-    If numDO <> "Все" Then
-        If kvnNames_GetCell("В_наличии!МестоХранения", rw).Value <> numDO Then
-            MsgBox ("Вам разрешена только продажа монет подразделения " & numDO & "!")
+    If numDO <> "Р’СЃРµ" Then
+        If kvnNames_GetCell("Р’_РЅР°Р»РёС‡РёРё!РњРµСЃС‚РѕРҐСЂР°РЅРµРЅРёСЏ", rw).Value <> numDO Then
+            MsgBox ("Р’Р°Рј СЂР°Р·СЂРµС€РµРЅР° С‚РѕР»СЊРєРѕ РїСЂРѕРґР°Р¶Р° РјРѕРЅРµС‚ РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ " & numDO & "!")
             Exit Sub
         End If
     End If
     
-    ActiveWorkbook.Sheets("Настройки").Range("D3").Value = ActiveCell.row
-    ActiveWorkbook.Sheets("Настройки").Range("D14").Value = idx + 1
+    ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D3").Value = ActiveCell.row
+    ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D14").Value = idx + 1
     
     If Not FlagFromJSON Then
         AktSale.Show
@@ -208,12 +208,12 @@ Attribute ПродажаМонеты_Sub.VB_ProcData.VB_Invoke_Func = " \n14"
     
 #If KIND_OF_INSTANCE = "DO" Then
     mes = CreateJSON(rw)
-    MsgBox ("Покупка оформлена." & vbCrLf & mes)
+    MsgBox ("РџРѕРєСѓРїРєР° РѕС„РѕСЂРјР»РµРЅР°." & vbCrLf & mes)
 #Else
     Call CopyToSale(rw)
     Call Send_Email_Using_Keys
     Sleep 200
-    'MsgBox ("Покупка оформлена")
+    'MsgBox ("РџРѕРєСѓРїРєР° РѕС„РѕСЂРјР»РµРЅР°")
 #End If
 
 End Sub
@@ -222,17 +222,17 @@ Private Sub Send_Email_Using_Keys()
     Dim Email_Subject, Email_Send_To, Email_Cc, Email_Bcc, Email_Body As String
     Dim hwnd As Long, nm
     
-    Email_Subject = "Распоряжение (Реализация монеты №" & Range("C5").Value & ")"
-    Email_Send_To = kvnNames_GetProp("КомуПосылатьРаспоряжения")
+    Email_Subject = "Р Р°СЃРїРѕСЂСЏР¶РµРЅРёРµ (Р РµР°Р»РёР·Р°С†РёСЏ РјРѕРЅРµС‚С‹ в„–" & Range("C5").Value & ")"
+    Email_Send_To = kvnNames_GetProp("РљРѕРјСѓРџРѕСЃС‹Р»Р°С‚СЊР Р°СЃРїРѕСЂСЏР¶РµРЅРёСЏ")
         
     'Email_Cc = "exceltipmail@gmail.com "
     'Email_Bcc = "exceltipmail@gmail.com "
-    'Email_Body = "%0D%0A" & Sheets("Настройки").Range("D15").Value & "%0D%0A"
+    'Email_Body = "%0D%0A" & Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D15").Value & "%0D%0A"
     Mail_Object = "mailto:" & Email_Send_To & "?subject=" & Email_Subject '& " &body=" & Email_Body
 
     ' *****************************************
-    Sheets("Расп реализация").Select
-' Sheets("Распоряжение").Copy
+    Sheets("Р Р°СЃРї СЂРµР°Р»РёР·Р°С†РёСЏ").Select
+' Sheets("Р Р°СЃРїРѕСЂСЏР¶РµРЅРёРµ").Copy
 '    Cells.Select
 '    Selection.Copy
 '    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
@@ -255,7 +255,7 @@ Private Sub Send_Email_Using_Keys()
     'nm = GetCaption(hwnd)
     'If InStr(nm, Email_Subject & kvnGetProp("idx_OutlookWindowCaption")) > 0 Then
     '    Application.SendKeys "+({INSERT})"
-    '    '   Application.SendKeys "%(ь)"
+    '    '   Application.SendKeys "%(СЊ)"
     '    '   Application.SendKeys ("{ENTER}")
     '    Application.StatusBar = False
     'Else
@@ -266,32 +266,32 @@ Private Sub Send_Email_Using_Keys()
 '    If Err.Description <> "" Then MsgBox Err.Description
 End Sub
 ' ****************************************************************************************************************
-' Cледующие процедуры (СохранитьБД_Монет, ЗагрузитьДанные_о_ПроданнойМонете, УдалитьПроданнуюМонетуИзНаличных, СкопируемМакросы) доступны только в инстанции Main
+' CР»РµРґСѓСЋС‰РёРµ РїСЂРѕС†РµРґСѓСЂС‹ (РЎРѕС…СЂР°РЅРёС‚СЊР‘Р”_РњРѕРЅРµС‚, Р—Р°РіСЂСѓР·РёС‚СЊР”Р°РЅРЅС‹Рµ_Рѕ_РџСЂРѕРґР°РЅРЅРѕР№РњРѕРЅРµС‚Рµ, РЈРґР°Р»РёС‚СЊРџСЂРѕРґР°РЅРЅСѓСЋРњРѕРЅРµС‚СѓРР·РќР°Р»РёС‡РЅС‹С…, РЎРєРѕРїРёСЂСѓРµРјРњР°РєСЂРѕСЃС‹) РґРѕСЃС‚СѓРїРЅС‹ С‚РѕР»СЊРєРѕ РІ РёРЅСЃС‚Р°РЅС†РёРё Main
 ' ****************************************************************************************************************
 #If KIND_OF_INSTANCE = "MAIN" Then
-Sub ОбновитьБД_Монет()
+Sub РћР±РЅРѕРІРёС‚СЊР‘Р”_РњРѕРЅРµС‚()
     Dim fName, CurName, vbFileName
     
-    fName = kvnNames_GetProp("ПутьКФайлуБазыДанныхДляДО") & kvnNames_GetProp("ИмяФайлаБазыДанныхДляДО")
+    fName = kvnNames_GetProp("РџСѓС‚СЊРљР¤Р°Р№Р»СѓР‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ") & kvnNames_GetProp("РРјСЏР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ")
     CurName = ActiveWorkbook.Name
     
-    If Dir(fName) <> "" Then                            ' Файл существует
-        SetAttr fName, vbNormal                         ' Снимем атрибут Read Only
-        Kill (fName)                                    ' Удалим файл
+    If Dir(fName) <> "" Then                            ' Р¤Р°Р№Р» СЃСѓС‰РµСЃС‚РІСѓРµС‚
+        SetAttr fName, vbNormal                         ' РЎРЅРёРјРµРј Р°С‚СЂРёР±СѓС‚ Read Only
+        Kill (fName)                                    ' РЈРґР°Р»РёРј С„Р°Р№Р»
     End If
 
-    Windows(ThisWorkbook.Name).Activate                 ' Скопируем данные с текущей книги в новую
-    Sheets(Array("Выполнение плана", "В наличии", "Технический лист", "Настройки", "kvnNames")).Copy
-    kvnNames_GetSheet("ИмяЛиста_В_наличии").Columns("S:X").EntireColumn.Hidden = True ' Скроем колонки с S по X
+    Windows(ThisWorkbook.Name).Activate                 ' РЎРєРѕРїРёСЂСѓРµРј РґР°РЅРЅС‹Рµ СЃ С‚РµРєСѓС‰РµР№ РєРЅРёРіРё РІ РЅРѕРІСѓСЋ
+    Sheets(Array("Р’С‹РїРѕР»РЅРµРЅРёРµ РїР»Р°РЅР°", "Р’ РЅР°Р»РёС‡РёРё", "РўРµС…РЅРёС‡РµСЃРєРёР№ Р»РёСЃС‚", "РќР°СЃС‚СЂРѕР№РєРё", "kvnNames")).Copy
+    kvnNames_GetSheet("РРјСЏР›РёСЃС‚Р°_Р’_РЅР°Р»РёС‡РёРё").Columns("S:X").EntireColumn.Hidden = True ' РЎРєСЂРѕРµРј РєРѕР»РѕРЅРєРё СЃ S РїРѕ X
     Range("A1").Select
     
-    ' Вставить данные по выполнению плана, как значения
-    kvnNames_GetSheet("ИмяЛиста_ВыполнениеПлана").Select
+    ' Р’СЃС‚Р°РІРёС‚СЊ РґР°РЅРЅС‹Рµ РїРѕ РІС‹РїРѕР»РЅРµРЅРёСЋ РїР»Р°РЅР°, РєР°Рє Р·РЅР°С‡РµРЅРёСЏ
+    kvnNames_GetSheet("РРјСЏР›РёСЃС‚Р°_Р’С‹РїРѕР»РЅРµРЅРёРµРџР»Р°РЅР°").Select
     Cells.Select
     Selection.Copy
     Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
     
-    ' Сохранить файл
+    ' РЎРѕС…СЂР°РЅРёС‚СЊ С„Р°Р№Р»
     Application.DisplayAlerts = False
     ActiveWorkbook.SaveAs Filename:=fName, FileFormat:=xlExcel8, CreateBackup:=False 'xlOpenXMLWorkbook
     Application.DisplayAlerts = False
@@ -300,37 +300,37 @@ Sub ОбновитьБД_Монет()
     SetAttr fName, vbReadOnly
     
     Windows(CurName).Activate
-    kvnNames_GetSheet("ИмяЛиста_ВыполнениеПлана").Select
+    kvnNames_GetSheet("РРјСЏР›РёСЃС‚Р°_Р’С‹РїРѕР»РЅРµРЅРёРµРџР»Р°РЅР°").Select
     
-    MsgBox ("Книга " & fName & " обновлена")
+    MsgBox ("РљРЅРёРіР° " & fName & " РѕР±РЅРѕРІР»РµРЅР°")
 End Sub
 
 ' *.JSON
 ' -----------------------------------------
 '{
-'    "ID_монеты": "1347",
-'    "Продал": "Козулин В.Н.",
-'    "Клиент": "Петров Петр Петрович",
-'    "Контакт": "2-33-223",
-'    "ДатаРеализации": "30.05.2017",
+'    "ID_РјРѕРЅРµС‚С‹": "1347",
+'    "РџСЂРѕРґР°Р»": "РљРѕР·СѓР»РёРЅ Р’.Рќ.",
+'    "РљР»РёРµРЅС‚": "РџРµС‚СЂРѕРІ РџРµС‚СЂ РџРµС‚СЂРѕРІРёС‡",
+'    "РљРѕРЅС‚Р°РєС‚": "2-33-223",
+'    "Р”Р°С‚Р°Р РµР°Р»РёР·Р°С†РёРё": "30.05.2017",
 '    "Login": "KozulinVN",
 '    "User": "50"
 '}
 ' -----------------------------------------
-Sub ЗагрузитьДанные_о_ПроданнойМонете()
+Sub Р—Р°РіСЂСѓР·РёС‚СЊР”Р°РЅРЅС‹Рµ_Рѕ_РџСЂРѕРґР°РЅРЅРѕР№РњРѕРЅРµС‚Рµ()
     Dim fName, fPath, t
     Dim cName, cValue
     Dim PathChange
     
-    PathChange = kvnNames_GetProp("ПутьКФайлуJSON")
+    PathChange = kvnNames_GetProp("РџСѓС‚СЊРљР¤Р°Р№Р»СѓJSON")
     
     fPath = PathChange & "S_*.JSON"
     fName = Dir(fPath, vbNormal)
     If (fName = "") Then
-        MsgBox ("Активизируйте доп. офисы, ни одной монеты не продано.")
+        MsgBox ("РђРєС‚РёРІРёР·РёСЂСѓР№С‚Рµ РґРѕРї. РѕС„РёСЃС‹, РЅРё РѕРґРЅРѕР№ РјРѕРЅРµС‚С‹ РЅРµ РїСЂРѕРґР°РЅРѕ.")
         Exit Sub
     Else
-        MsgBox ("Загружаем файл " & fName)
+        MsgBox ("Р—Р°РіСЂСѓР¶Р°РµРј С„Р°Р№Р» " & fName)
     End If
     
     Open PathChange & fName For Input As #1
@@ -342,68 +342,68 @@ Sub ЗагрузитьДанные_о_ПроданнойМонете()
             cName = Mid(s, 3, t - 4)
             cValue = Mid(s, t + 3, Len(s) - t - 3)
             '=MATCH(cName,A8:A14,0)
-            t = Application.WorksheetFunction.Match(cName, ActiveWorkbook.Sheets("Настройки").Range("A8:A14"), 0)
-            If ActiveWorkbook.Sheets("Настройки").Range("D7").Offset(t, 0).NumberFormat = "m/d/yyyy" Then
+            t = Application.WorksheetFunction.Match(cName, ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("A8:A14"), 0)
+            If ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D7").Offset(t, 0).NumberFormat = "m/d/yyyy" Then
                 cValue = CDate(cValue)
             End If
-            ActiveWorkbook.Sheets("Настройки").Range("D7").Offset(t, 0).Value = cValue
+            ActiveWorkbook.Sheets("РќР°СЃС‚СЂРѕР№РєРё").Range("D7").Offset(t, 0).Value = cValue
         End If
     Wend
     Close #1
     
-    Call ПродажаМонеты_Sub(True)
+    Call РџСЂРѕРґР°Р¶Р°РњРѕРЅРµС‚С‹_Sub(True)
     Kill PathChange & fName
     
     If Dir() <> "" Then
-        MsgBox ("В каталоге еще есть файлы для обработки. Запустите макрос повторно.")
+        MsgBox ("Р’ РєР°С‚Р°Р»РѕРіРµ РµС‰Рµ РµСЃС‚СЊ С„Р°Р№Р»С‹ РґР»СЏ РѕР±СЂР°Р±РѕС‚РєРё. Р—Р°РїСѓСЃС‚РёС‚Рµ РјР°РєСЂРѕСЃ РїРѕРІС‚РѕСЂРЅРѕ.")
     Else
-        MsgBox ("Все файлы в каталоге обработаны.")
+        MsgBox ("Р’СЃРµ С„Р°Р№Р»С‹ РІ РєР°С‚Р°Р»РѕРіРµ РѕР±СЂР°Р±РѕС‚Р°РЅС‹.")
     End If
 End Sub
-Sub УдалитьПроданнуюМонетуИзНаличных()
+Sub РЈРґР°Р»РёС‚СЊРџСЂРѕРґР°РЅРЅСѓСЋРњРѕРЅРµС‚СѓРР·РќР°Р»РёС‡РЅС‹С…()
     Dim id, rw As Integer
     
-    If ActiveSheet.Name <> kvnNames_GetProp("ИмяЛистаПродано") Then
-        MsgBox ("Запускаемся только на листе '" & kvnNames_GetProp("ИмяЛистаПродано") & "'")
+    If ActiveSheet.Name <> kvnNames_GetProp("РРјСЏР›РёСЃС‚Р°РџСЂРѕРґР°РЅРѕ") Then
+        MsgBox ("Р—Р°РїСѓСЃРєР°РµРјСЃСЏ С‚РѕР»СЊРєРѕ РЅР° Р»РёСЃС‚Рµ '" & kvnNames_GetProp("РРјСЏР›РёСЃС‚Р°РџСЂРѕРґР°РЅРѕ") & "'")
         Exit Sub
     End If
     
-    If kvnNames_GetCell("Продано!Статус").Value = "Отражено" Then
-        MsgBox ("Монета уже отражена в учете")
+    If kvnNames_GetCell("РџСЂРѕРґР°РЅРѕ!РЎС‚Р°С‚СѓСЃ").Value = "РћС‚СЂР°Р¶РµРЅРѕ" Then
+        MsgBox ("РњРѕРЅРµС‚Р° СѓР¶Рµ РѕС‚СЂР°Р¶РµРЅР° РІ СѓС‡РµС‚Рµ")
         Exit Sub
     Else
-        kvnNames_GetCell("Продано!Статус").Value = "Отражено"
+        kvnNames_GetCell("РџСЂРѕРґР°РЅРѕ!РЎС‚Р°С‚СѓСЃ").Value = "РћС‚СЂР°Р¶РµРЅРѕ"
     End If
     
-    id = kvnNames_GetCell("Продано!УникНомерМонеты").Value
-    rw = kvnNames_FindValue("В_наличии!УникНомерМонеты", id).row
+    id = kvnNames_GetCell("РџСЂРѕРґР°РЅРѕ!РЈРЅРёРєРќРѕРјРµСЂРњРѕРЅРµС‚С‹").Value
+    rw = kvnNames_FindValue("Р’_РЅР°Р»РёС‡РёРё!РЈРЅРёРєРќРѕРјРµСЂРњРѕРЅРµС‚С‹", id).row
     
-    kvnNames_GetSheet("ИмяЛиста_В_наличии").Activate
+    kvnNames_GetSheet("РРјСЏР›РёСЃС‚Р°_Р’_РЅР°Р»РёС‡РёРё").Activate
     Rows(rw & ":" & rw).Select
-    If kvnNames_GetCell("В_наличии!Статус", rw).Value <> "продано" Then
-        MsgBox ("Мы пытаемся удалить не проданную монету!")
+    If kvnNames_GetCell("Р’_РЅР°Р»РёС‡РёРё!РЎС‚Р°С‚СѓСЃ", rw).Value <> "РїСЂРѕРґР°РЅРѕ" Then
+        MsgBox ("РњС‹ РїС‹С‚Р°РµРјСЃСЏ СѓРґР°Р»РёС‚СЊ РЅРµ РїСЂРѕРґР°РЅРЅСѓСЋ РјРѕРЅРµС‚Сѓ!")
         Exit Sub
     End If
         
-    If MsgBox("Удалим строку " & t, vbYesNo + vbDefaultButton2) = vbYes Then
+    If MsgBox("РЈРґР°Р»РёРј СЃС‚СЂРѕРєСѓ " & t, vbYesNo + vbDefaultButton2) = vbYes Then
         Selection.Delete Shift:=xlUp
     End If
-    kvnNames_GetSheet("ИмяЛистаПродано").Activate
+    kvnNames_GetSheet("РРјСЏР›РёСЃС‚Р°РџСЂРѕРґР°РЅРѕ").Activate
     
-    MsgBox ("Монета " & id & " удалена из монет 'В наличии'")
+    MsgBox ("РњРѕРЅРµС‚Р° " & id & " СѓРґР°Р»РµРЅР° РёР· РјРѕРЅРµС‚ 'Р’ РЅР°Р»РёС‡РёРё'")
     
 End Sub
-Sub СкопируемМакросы()
+Sub РЎРєРѕРїРёСЂСѓРµРјРњР°РєСЂРѕСЃС‹()
     Dim mName
     
-    mName = kvnNames_GetProp("ИмяФайлаСМакросамиДляВСП")
+    mName = kvnNames_GetProp("РРјСЏР¤Р°Р№Р»Р°РЎРњР°РєСЂРѕСЃР°РјРёР”Р»СЏР’РЎРџ")
     
     If ActiveWorkbook.Name <> mName Then
-        MsgBox ("Запускаемся только на '" & mName & "'")
+        MsgBox ("Р—Р°РїСѓСЃРєР°РµРјСЃСЏ С‚РѕР»СЊРєРѕ РЅР° '" & mName & "'")
         Exit Sub
     End If
     
-    ' Удалим все старые макросы
+    ' РЈРґР°Р»РёРј РІСЃРµ СЃС‚Р°СЂС‹Рµ РјР°РєСЂРѕСЃС‹
     With ActiveWorkbook.VBProject.VBComponents
          For iCount& = .Count To 1 Step -1
              Set iVBComponent = .Item(iCount&)
@@ -414,7 +414,7 @@ Sub СкопируемМакросы()
              End Select
         Next
     End With
-    ' Скопируем наши макросы
+    ' РЎРєРѕРїРёСЂСѓРµРј РЅР°С€Рё РјР°РєСЂРѕСЃС‹
     With ThisWorkbook.VBProject.VBComponents
          For iCount& = .Count To 1 Step -1
             If .Item(iCount&).Type <= 3 Then
@@ -427,40 +427,40 @@ Sub СкопируемМакросы()
             End If
          Next
     End With
-    ActiveWorkbook.VBProject.VBComponents("УчетМонет").CodeModule.ReplaceLine 9, "'#Const KIND_OF_INSTANCE = ""MAIN"""
-    ActiveWorkbook.VBProject.VBComponents("УчетМонет").CodeModule.ReplaceLine 10, "#Const KIND_OF_INSTANCE = ""DO"""
-    MsgBox ("Макросы скопированы")
+    ActiveWorkbook.VBProject.VBComponents("РЈС‡РµС‚РњРѕРЅРµС‚").CodeModule.ReplaceLine 9, "'#Const KIND_OF_INSTANCE = ""MAIN"""
+    ActiveWorkbook.VBProject.VBComponents("РЈС‡РµС‚РњРѕРЅРµС‚").CodeModule.ReplaceLine 10, "#Const KIND_OF_INSTANCE = ""DO"""
+    MsgBox ("РњР°РєСЂРѕСЃС‹ СЃРєРѕРїРёСЂРѕРІР°РЅС‹")
 End Sub
 
 #End If
 ' ****************************************************************************************************************
-' Предыдущие процедуры (СохранитьБД_Монет, ЗагрузитьДанные_о_ПроданнойМонете, УдалитьПроданнуюМонетуИзНаличных, СкопируемМакросы) доступны только в инстанции Main
+' РџСЂРµРґС‹РґСѓС‰РёРµ РїСЂРѕС†РµРґСѓСЂС‹ (РЎРѕС…СЂР°РЅРёС‚СЊР‘Р”_РњРѕРЅРµС‚, Р—Р°РіСЂСѓР·РёС‚СЊР”Р°РЅРЅС‹Рµ_Рѕ_РџСЂРѕРґР°РЅРЅРѕР№РњРѕРЅРµС‚Рµ, РЈРґР°Р»РёС‚СЊРџСЂРѕРґР°РЅРЅСѓСЋРњРѕРЅРµС‚СѓРР·РќР°Р»РёС‡РЅС‹С…, РЎРєРѕРїРёСЂСѓРµРјРњР°РєСЂРѕСЃС‹) РґРѕСЃС‚СѓРїРЅС‹ С‚РѕР»СЊРєРѕ РІ РёРЅСЃС‚Р°РЅС†РёРё Main
 ' ****************************************************************************************************************
 
-Sub ПродажаМонеты()
+Sub РџСЂРѕРґР°Р¶Р°РњРѕРЅРµС‚С‹()
 #If KIND_OF_INSTANCE = "DO" Then
     Dim i As Integer, flag As Boolean
-    Dim ИмяФайлаБазыДанныхДляДО
+    Dim РРјСЏР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ
     
-    ИмяФайлаБазыДанныхДляДО = kvnNames_GetProp("ИмяФайлаБазыДанныхДляДО")
-    If ThisWorkbook.Name = ActiveWorkbook.Name Then                     ' Макрос запущен операционистом с книги макросов
-        i = 1                                                           ' Попытаемся найти книгу базы данных
+    РРјСЏР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ = kvnNames_GetProp("РРјСЏР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ")
+    If ThisWorkbook.Name = ActiveWorkbook.Name Then                     ' РњР°РєСЂРѕСЃ Р·Р°РїСѓС‰РµРЅ РѕРїРµСЂР°С†РёРѕРЅРёСЃС‚РѕРј СЃ РєРЅРёРіРё РјР°РєСЂРѕСЃРѕРІ
+        i = 1                                                           ' РџРѕРїС‹С‚Р°РµРјСЃСЏ РЅР°Р№С‚Рё РєРЅРёРіСѓ Р±Р°Р·С‹ РґР°РЅРЅС‹С…
         flag = False
         While (i <= Application.Workbooks.Count) And (flag = False)
-            If Application.Workbooks(i).Name = ИмяФайлаБазыДанныхДляДО Then
-                Windows(ИмяФайлаБазыДанныхДляДО).Activate
-                kvnNames_GetSheet("ЛистПоУмолчаниюФайлаБазыДанныхДляДО").Select
+            If Application.Workbooks(i).Name = РРјСЏР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ Then
+                Windows(РРјСЏР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ).Activate
+                kvnNames_GetSheet("Р›РёСЃС‚РџРѕРЈРјРѕР»С‡Р°РЅРёСЋР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ").Select
                 flag = True
             Else
                 i = i + 1
             End If
         Wend
         If Not flag Then
-            Workbooks.Open Filename:=kvnNames_GetProp("ПутьКФайлуБазыДанныхДляДО") & ИмяФайлаБазыДанныхДляДО, UpdateLinks:=0
-            kvnNames_GetSheet("ЛистПоУмолчаниюФайлаБазыДанныхДляДО").Select
+            Workbooks.Open Filename:=kvnNames_GetProp("РџСѓС‚СЊРљР¤Р°Р№Р»СѓР‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ") & РРјСЏР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ, UpdateLinks:=0
+            kvnNames_GetSheet("Р›РёСЃС‚РџРѕРЈРјРѕР»С‡Р°РЅРёСЋР¤Р°Р№Р»Р°Р‘Р°Р·С‹Р”Р°РЅРЅС‹С…Р”Р»СЏР”Рћ").Select
         End If
     End If
 #End If
-    Call ПродажаМонеты_Sub(False)
+    Call РџСЂРѕРґР°Р¶Р°РњРѕРЅРµС‚С‹_Sub(False)
     
 End Sub
