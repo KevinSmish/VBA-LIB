@@ -1,7 +1,7 @@
-Attribute VB_Name = "kvnNames_v1_1"
+Attribute VB_Name = "kvnNames_v1_2"
 ' БИБЛИОТЕКА kvnNames - отвязка данных от статичных имен
 ' Автор KVN
-' v. 1.1 от 02.06.2017 г.
+' v. 1.2 от 07.06.2017 г.
 ' ----------------------------------------------------------------------
 ' Книга должна содержать лист 'kvnNames' с таблицей из следующих колонок
 ' Имя, Значение, Адрес, Примечание
@@ -91,4 +91,22 @@ Public Function kvnNames_GetSheet(p_Name As String) As Worksheet
     formula = ActiveWorkbook.Sheets(cnstSheet_kvnNames).Range("B" & idx).Value
     Set kvnNames_GetSheet = ActiveWorkbook.Sheets(formula)
 End Function
-
+Public Function kvnNames_Match(p_Name As String, p_val) As String
+    Dim idx, formula
+    Dim rng As Range
+    Dim s1, s2
+    
+    On Error Resume Next
+    idx = 0
+    idx = Application.WorksheetFunction.Match(p_Name, ActiveWorkbook.Sheets(cnstSheet_kvnNames).Range("$A:$A"), 0)
+    On Error GoTo 0
+    If idx = 0 Then
+        MsgBox ("Имя " & p_Name & " не найдено на листе " & cnstSheet_kvnNames)
+        MsgBox (1 / 0)
+        Exit Function
+    End If
+    
+    formula = Mid(ActiveWorkbook.Sheets(cnstSheet_kvnNames).Range("B" & idx).formula, 2, 255)
+    Set rng = Range(formula)
+    kvnNames_Match = "=Match(" & p_val & ", '" & rng.Worksheet.Name & "'!" & rng.Worksheet.Columns(rng.Column).Address & ",0)"
+End Function
