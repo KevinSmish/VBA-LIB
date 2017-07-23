@@ -1,0 +1,3311 @@
+/* ╔═══════════════════════════════════════════════════════════════════════════════════╗ */
+/* ║ БИБЛИОТЕКА РАБОТЫ С ПОЛЬЗОВАТЕЛЬСКИМИ ФОРМАМИ "KVNVCH"                            ║ */
+/* ║ ПРОГРАММИСТ В.Н.КОЗУЛИН, ОСБ 8638                                                 ║ */
+/* ║ Декабрь 2003 г.                                                                   ║ */
+/* ╚═══════════════════════════════════════════════════════════════════════════════════╝ */
+/* Версия от 15.01.2004.  17:00                                                          */
+
+/*Import "D:\\RSL\\LIB\\scrlib";*/
+Import "..\\Obj\\scrlib";
+Import "..\\mac\\USERMAC\\KVN\\kvnkbd.mac";
+
+Var 
+  ShowPercentForKvnMenu = False, 
+  GridKindForKvnMenu    = False, 
+  GridCaptForKvnMenu    = Null, 
+  MultySelectForKvnMenu = False, 
+  ArraySelectForKvnMenu = Null;
+
+Private Const
+  cnstMinLatinChar = CodeFor("A"),            /* Минимальный символ латинского алфавита  */
+  cnstMaxLatinChar = CodeFor("Z"),            /* Максимальный символ латинского алфавита */
+  cnstMinNum       = CodeFor("0"),            /* Минимальный символ цифры                */
+  cnstMaxNum       = CodeFor("9");            /* Максимальный символ цифры               */
+
+Private Const                                 /* Коды клавиш                             */
+    kbCtrlA     = 1,        kbCtrlB     = 2,        kbCtrlC     = 3,
+    kbCtrlD     = 4,        kbCtrlE     = 5,        kbCtrlF     = 6,
+    kbCtrlG     = 7,        kbCtrlH     = 8,        kbCtrlI     = 9,
+    kbCtrlJ     = 10,       kbCtrlK     = 11,       kbCtrlL     = 12,
+    kbCtrlM     = 13,       kbCtrlN     = 14,       kbCtrlO     = 15,
+    kbCtrlP     = 16,       kbCtrlQ     = 17,       kbCtrlR     = 18,
+    kbCtrlS     = 19,       kbCtrlT     = 20,       kbCtrlU     = 21,
+    kbCtrlV     = 22,       kbCtrlW     = 23,       kbCtrlX     = 24,
+    kbCtrlY     = 25,       kbCtrlZ     = 26,       kbAltEqual  = 387,
+    kbEsc       = 27,       kbAltEnter  = 284,      kbCtrlIns   = 402,
+    kbBack      = 8,        kbCtrlBack  = 127,      kbShiftTab  = 271,
+    kbTab       = 9,        kbAltQ      = 272,      kbAltW      = 273,
+    kbAltE      = 274,      kbAltR      = 275,      kbAltT      = 276,
+    kbAltY      = 277,      kbAltU      = 278,      kbAltI      = 279,
+    kbAltO      = 280,      kbAltP      = 281,      kbCtrlEnter = 10,
+    kbEnter     = 13,       kbAltA      = 286,      kbAltS      = 287,
+    kbAltD      = 288,      kbAltF      = 289,      kbAltG      = 290,
+    kbAltH      = 291,      kbAltJ      = 292,      kbAltK      = 293,
+    kbAltL      = 294,      kbAltZ      = 300,      kbAltX      = 301,
+    kbAltC      = 302,      kbAltV      = 303,      kbAltB      = 304,
+    kbAltN      = 305,      kbAltM      = 306,      kbF1        = 315,
+    kbF2        = 316,      kbF3        = 317,      kbF4        = 318,
+    kbF5        = 319,      kbF6        = 320,      kbF7        = 321,
+    kbF8        = 322,      kbF9        = 323,      kbF10       = 324,
+    kbF11       = 389,      kbF12       = 390,      kbNoKey     = 0,
+    kbHome      = 327,      kbUp        = 328,      kbPgUp      = 329,
+    kbLeft      = 331,      kbRight     = 333,      kbSpace     = 32,
+    kbEnd       = 335,      kbDown      = 336,      kbCtrlPgUp  = 388,
+    kbPgDn      = 337,      kbIns       = 338,      kbDel       = 339,
+    kbShiftF1   = 340,      kbShiftF2   = 341,      kbShiftF3   = 342,
+    kbShiftF4   = 343,      kbShiftF5   = 344,      kbShiftF6   = 345,
+    kbShiftF7   = 346,      kbShiftF8   = 347,      kbShiftF9   = 348,
+    kbShiftF10  = 349,      kbShiftF11  = 391,      kbShiftF12  = 392,
+    kbCtrlF1    = 350,      kbCtrlF2    = 351,      kbCtrlRight = 372,
+    kbCtrlF3    = 352,      kbCtrlF4    = 353,      kbCtrlF5    = 354,
+    kbCtrlF6    = 355,      kbCtrlF7    = 356,      kbCtrlF8    = 357,
+    kbCtrlF9    = 358,      kbCtrlF10   = 359,      kbCtrlF11   = 393,
+    kbCtrlF12   = 394,      kbAltF1     = 360,      kbCtrlDel   = 403,
+    kbAltF2     = 361,      kbAltF3     = 362,      kbAltF4     = 363,
+    kbAltF5     = 364,      kbAltF6     = 365,      kbAltF7     = 366,
+    kbAltF8     = 367,      kbAltF9     = 368,      kbAltF10    = 369,
+    kbAltF11    = 395,      kbAltF12    = 396,      kbCtrlLeft  = 371,
+    kbCtrlEnd   = 373,      kbCtrlPgDn  = 374,      kbCtrlHome  = 375,
+    kbAlt1      = 376,      kbAlt2      = 377,      kbAlt3      = 378,
+    kbAlt4      = 379,      kbAlt5      = 380,      kbAlt6      = 381,
+    kbAlt7      = 382,      kbAlt8      = 383,      kbAlt9      = 384,
+    kbAlt0      = 385,      kbAltMinus  = 386,      kbAltTab    = 421, 
+    kbCtrlUp    = 397,      kbCtrlDown  = 401;
+
+Private Const                                 /* Коды цветов                             */
+   BLACK         = 0,       BLUE          = 1,      GREEN         = 2,
+   CYAN          = 3,       RED           = 4,      MAGENTA       = 5,
+   BROWN         = 6,       LIGHTGRAY     = 7,      DARKGRAY      = 8,
+   LIGHTBLUE     = 9,       LIGHTGREEN    = 10,     LIGHTCYAN     = 11,
+   LIGHTRED      = 12,      LIGHTMAGENTA  = 13,     YELLOW        = 14,
+   WHITE         = 15;     
+
+Private Const                                 /* Коды рамок фреймов                      */
+   NoFrame     = 0,         DoubleFrame   = 1,      SingleFrame   = 2,
+   SolidFrame  = 3,         DvsFrame      = 4,      ShdFrame      = 5;
+
+Private Const                                 /* Коды клавиш мыши                        */
+   MouseLeftButton  = 1,    MouseRightButton = 2;
+
+Private Const                                 /* Коды формы курсора                      */
+   NormCursor  = 1542,      BarCursor   = 262,      MidCursor   = 775,    NoCursor    = 8192;
+
+class TkvnEvent                               /* Класс событий мыши и клавы              */
+  Var 
+   MouseDown:bool,                            /* Событие нажатия клавиши мыши            */
+   MouseUp:bool,                              /* Событие отжатия клавиши мыши            */
+   MouseMove:bool,                            /* Событие перемещения мыши                */
+   MouseDoubleClick:bool,                     /* Событие двойного клика мыши             */
+   KeyDown:bool,                              /* Событие нажатия клвиши клавиатуры       */
+   ShiftKeyDown:bool, 
+   ShiftKeysShift:bool,     
+   ShiftKeysCtrl:bool,                        /* Событие нажатия клавиши Ctrl            */
+   ShiftKeysAlt:bool,                         /* Событие нажатия клавиши Alt             */
+   ShiftKeysScroll:bool,                      /* Событие нажатия клавиши Scroll          */
+   ShiftKeysNumLock:bool,                     /* Событие нажатия клавиши NumLock         */
+   ShiftKeysCapsLock:bool,                    /* Событие нажатия клавиши CapsLock        */
+   MouseX:integer,                            /* Х-Позиция курсора мыши                  */
+   MouseY:integer,                            /* Y-Позиция курсора мыши                  */
+   MouseButtons:integer,                      /* Код нажатой клавиши мыши                */
+   KeyCode:integer;                           /* Код нажатой клавиши клавиатуры          */
+
+  MACRO testEvent                             /* TkvnEvent: Было ли событие?             */
+    return MouseUp or                         /* Отжата клавиша мыши                     */             
+           MouseDown or                       /* Нажата клавиша мыши                     */
+           MouseMove or                       /* Юзер дернул мышкой                      */
+           MouseDoubleClick or                /* Дважды нажата клавиша мыши              */
+           KeyDown or                         /* Нажата клавиша                          */
+           ShiftKeyDown;
+  END;
+
+  MACRO clearEvent                            /* TkvnEvent: Забываем о событиях          */
+    MouseUp           =
+    MouseDown         =
+    MouseMove         =
+    MouseDoubleClick  =
+    KeyDown           =
+    ShiftKeyDown      = 
+    ShiftKeyDown      = 
+    ShiftKeysShift    =
+    ShiftKeysCtrl     =
+    ShiftKeysAlt      = 
+    ShiftKeysScroll   =
+    ShiftKeysNumLock  =
+    ShiftKeysCapsLock = False;
+
+    MouseX       =
+    MouseY       =
+    MouseButtons = 
+    KeyCode      = 0;
+  END;
+
+  MACRO getEvent                              /* TkvnEvent: Получили событие             */
+    _clearEvent;
+    _getEvent;
+
+    MouseUp           = _evMouseUp;
+    MouseDown         = _evMouseDown;
+    MouseMove         = _evMouseMove;
+    MouseDoubleClick  = _evMouseDoubleClick;
+    KeyDown           = _evKeyDown;
+    ShiftKeyDown      = _evShiftKeyDown;
+
+    MouseX            = _MouseX;
+    MouseY            = _MouseY;
+    MouseButtons      = _MouseButton;
+    KeyCode           = _KeyCode;
+
+    ShiftKeysShift    = _S_Shift;
+    ShiftKeysCtrl     = _S_Ctrl;
+    ShiftKeysAlt      = _S_Alt;
+    ShiftKeysScroll   = _S_Scroll;
+    ShiftKeysNumLock  = _S_NumLock;
+    ShiftKeysCapsLock = _S_CapsLock;
+  END;
+
+End;
+
+MACRO kvnClearScreen();
+  FillRect( 0, 0, ScreenSizeX, ScreenSizeY, WHITE, BLUE, 32); 
+END;
+
+MACRO kvnPushScreen;
+  PushScreen( 0, 0, ScreenSizeX-1, ScreenSizeY-1 ); /* StatusLine            */
+END;
+
+MACRO kvnPopScreen;
+  PopScreen;
+END;
+
+Private MACRO kvnStrToLen(cStr, cLen, cSymb, cLeft);
+  Private Var s, vLen;
+
+  If (cStr == Null) cStr = ""; End; 
+  s    = String(cStr);
+  vLen = StrLen(s);
+
+  If (vLen>cLen)    Return SubStr(cStr, 1, cLen); End;
+  If (vLen == cLen) Return cStr;                  End; 
+
+  If (cSymb==Null) cSymb = " "; End; 
+  If ((cLeft==Null) Or (cLeft == True))
+    While (vLen<cLen) 
+      cStr = cSymb + cStr;
+      vLen = vLen + 1;
+    End;
+  Else
+    While (vLen<cLen) 
+      cStr = cStr + cSymb;
+      vLen = vLen + 1;
+    End;
+  End;
+  Return cStr;
+END;
+
+Private MACRO kvnStrToLenCenter(cStr, cLen, cSymb);
+  Private Var s = kvnStrToLen(cStr, (cLen+StrLen(cStr))/2, cSymb, False);
+  Return kvnStrToLen(s, cLen, cSymb);
+END;
+
+/* *** */
+MACRO kvnGetArrSize(vArr)                     /* Вычисляем размер Array или TArray       */
+  If (ValType(vArr) == 15)                    /* Ясно и ежу: ValType(V_ARRАY) = 15       */
+    Return ASize(vArr);                       /* Размер массива определим ч/з ASize      */
+  End;                                        /* ValType(TArray) = 19                    */
+  Return vArr.Size;                           /* Размер TArray определим через .Size     */
+END;
+
+MACRO kvnGetMaxLenInArray(vArr)               /* Ищем самую длинную строку в массиве     */
+  Var i      = 0,                             
+      MaxLen = 0;
+
+  While ( i<kvnGetArrSize(vArr) )             /* Бежим по массиву, пока он не кончится   */
+    If ( StrLen(vArr[i])>MaxLen ) MaxLen = StrLen(vArr[i]); End; /* У нас новый лидер    */
+    i = i + 1;                                /* Дальше, дальше, дальше...               */
+  End;
+  Return MaxLen;                              /* Возвращаем лидера                       */
+END;
+
+MACRO kvnSeekElemInArray(vArr, vEl);          /* Ищем элмент массива. Возр.индекс или -1 */
+  Var i = 0;
+
+  While ( i<kvnGetArrSize(vArr) )             /* Бежим по массиву, пока он не кончится   */
+    If ( vArr[i] == vEl) Return i; End;       /* Ура! элемент найден                     */
+    i = i + 1;                                /* Дальше, дальше, дальше...               */
+  End;
+  Return -1;                                  /* Я совсем ничего не принес... (С) Заяц   */
+END;
+
+MACRO kvnSplit(str, arr, slen, MaxString);
+  Var 
+    i = 0, 
+    j = 0, 
+    s = str, 
+    Ch, 
+    CurStr = "";
+
+  While (StrLen(s)>0)
+    Ch = SubStr(s, 1, 1); i = i + 1;
+    s  = SubStr(s, 2);
+    If ((Ch!="\n") And (Ch!="|")) CurStr = CurStr + Ch; End;
+    If ((Ch == "\n") Or (Ch=="|") Or (StrLen(CurStr)==slen) Or (StrLen(s)==0)) 
+      arr[j] = CurStr;
+      CurStr = "";
+      j = j + 1;
+      If (MaxString != Null) 
+        If (MaxString == j-1) i = i - 1 - StrLen(arr[j-1]); Return i; End;
+      End;
+    End;
+  End;
+  Return j;
+END;
+
+MACRO kvnMsgBox();
+  Var sLen, y, s, ln, i;
+  Var Left, Right, Top, Bottom, off;
+  Var vText = "", vv;
+  Var arr = TArray;
+
+  i = 0;
+  While ( GetParm(i, vv) ) vText = vText + String(vv); i = i + 1; End; 
+
+  If ( vText == "" ) vText = "Значение не определено"; End; 
+
+  ln = kvnSplit(vText, arr, ScreenSizeX-5);
+
+  sLen   = kvnGetMaxLenInArray(arr);
+  Left   = (ScreenSizeX - sLen)/2 - 1;
+  Right  = Left + sLen + 1;
+  Top    = (ScreenSizeY-ln)/2; 
+  Bottom = Top + ln - 1;
+
+  PushScreen(0, 0, ScreenSizeX, ScreenSizeY);
+  Frame   ( Left-1, Top-1, Right + 1, Bottom + 1, SingleFrame, WHITE, LIGHTGRAY);
+  FillRect( Left,   Top,   Right,     Bottom,     BLACK, LIGHTGRAY, " ");
+  i = 0;
+  While ( i<ln )
+    off = (sLen-StrLen(arr[i]))/2+1;
+    DrawStr ( Left + off, Top+i, arr[i], BLACK, LIGHTGRAY, StrLen(arr[i])); 
+    i = i + 1;
+  End;
+
+  RectColorChange(Left +1, Bottom+2, Right+3, Bottom+2, DARKGRAY, BLACK);
+  RectColorChange(Right+2, Top,      Right+3, Bottom+1, DARKGRAY, BLACK);
+
+  While ( TestEvent!=kbEsc ) End;
+  PopScreen; 
+END;
+
+/* *** */
+Private MACRO kvnIsInt1(pStr);
+  Var vCh, vStr, i;
+
+  If ((pStr == "") Or (pStr == V_UNDEF)) Return False; End;
+
+  vStr = Trim(pStr);
+  If (StrLen(vStr)==0) Return False; End;
+  i = 1;
+  While (i<=StrLen(vStr))
+    vCh = SubStr(vStr, i, 1);
+    vCh = CodeFor(vCh);
+    If ((vCh<48) Or (vCh>57)) Return False; End;
+    i = i + 1;
+  End;
+  Return True;
+END;
+
+Private MACRO kvnIsDate1(dd, mm, yy);
+  Var MaxDay = 30;
+
+  If ((mm ==  1) Or (mm ==  3) Or (mm ==  5) Or (mm ==  7) Or 
+      (mm ==  8) Or (mm == 10) Or (mm == 12) 
+     )
+    MaxDay = 31;
+  End;
+  If (mm==2) MaxDay = 29; End;
+
+  If (( dd<1 ) or (dd>MaxDay)) Return False; End;
+  If (( mm<1 ) or (mm>12))     Return False; End;
+  Return True;
+END;
+
+Private MACRO kvnChrSplitStr1(cStr, aSegment, cChr) 
+  var i  =  0,
+      j  = -1,
+      l  = StrLen(cStr),
+      cC = cStr;
+
+  While (i<l)
+    if ((i=StrBrk((cC=substr(cC,i+1)),cChr))==0) i=l+1; end; 
+    aSegment((j=j+1))=substr(cC,1,i-1);
+  End;
+  Return j;
+END;
+
+/* Преобразует V_STRING в V_DATE */
+Private MACRO kvnStrToDate1(cStr)
+  array aStr;
+  Var dd, mm, yy;
+
+  If ((kvnIsInt1(cStr)) And (StrLen(cStr)==6))
+    dd = Int(SubStr(cStr, 1, 2));
+    mm = Int(SubStr(cStr, 3, 2));
+    yy = 2000+Int(SubStr(cStr, 5, 2));
+  Else
+    If (( cStr == "" ) Or (cStr == V_UNDEF))  Return Date(0, 0, 0); End;
+    If (kvnChrSplitStr1(cStr,aStr,"/.-") != 2) Return Date(0, 0, 0); End;
+
+    If ( not kvnIsInt1(aStr[0])) Return Date(0, 0, 0); End; dd = int(aStr[0]); 
+    If ( not kvnIsInt1(aStr[1])) Return Date(0, 0, 0); End; mm = int(aStr[1]); 
+    If ( not kvnIsInt1(aStr[2])) Return Date(0, 0, 0); End; yy = int(aStr[2]); 
+  End;
+
+  If (kvnIsDate1(dd,mm,yy)) 
+    return(Date(dd,mm,yy));  
+  Else
+    return Date(0, 0, 0);
+  End;
+END;
+
+MACRO ValToType(val, type);
+
+  If ((type == "V_UNDEF") Or (ValType(type)==V_UNDEF))       /* 0  */
+    Return Int(val);
+  End;
+
+  If ((type == "V_INTEGER") Or (ValType(type)==V_INTEGER))   /* 1  */
+    Return Int(val);
+  End;
+
+  If ((type == "V_MONEY") Or (ValType(type)==V_MONEY))       /* 2  */
+    Return Money(val);
+  End;
+
+  If ((type == "V_DOUBLE") Or (ValType(type)==V_DOUBLE))     /* 3  */
+    Return Double(val);
+  End;
+
+  If ((type == "V_MONEYL") Or (ValType(type)==V_MONEYL))     /* 4  */
+    Return Moneyl(val);
+  End;
+
+  If ((type == "V_DOUBLEL") Or (ValType(type)==V_DOUBLEL))   /* 5  */
+    Return Doublel(val);
+  End;
+
+  If ((type == "V_STRING") Or (ValType(type)==V_STRING))     /* 6  */
+    Return String(val);
+  End;
+
+  If ((type == "V_DATE") Or (ValType(type)==V_DATE))         /* 9  */
+    Return kvnStrToDate1(val);
+  End;
+
+END;
+
+/* *** */ 
+/* Макрос вычисления верхней строки скроллируемого текста */
+MACRO kvnGetCurStrForScroll(TotalString, TotalItems, CurrentItem, CurrentString, Delta); 
+  Var SelectedString;
+
+  If (CurrentString == Null)                  /* Первичный расчет                        */
+    If (CurrentItem<TotalString)              /* Строка влезает без скроллинга           */
+      Return 0;
+    End;
+    If (CurrentItem<TotalItems-TotalString)   /* Снизу хватает строк                     */
+      Return CurrentItem;
+    End;
+    Return TotalItems-TotalString;            /* Дальше скроллинг не идет                */
+  End;
+
+  SelectedString = CurrentItem - CurrentString;
+  If (Delta<0)                                /* Попытка движения вверх                  */
+    If ( Delta == -1 )                        /* Движение на шажок                       */
+      If (SelectedString == 0)                /* Нужен скроллинг вверх                   */
+        If (CurrentString>0)                  /* Первый элемент не достигнут             */
+          SetParm(2, CurrentItem-1);          /* Вверх по пунктам                        */
+          Return CurrentString-1;             /* Вверх по строкам                        */                                    
+        End;                                  /* Мы на самом верху. Опаньки.             */
+        Return CurrentString;                 /* А чем еще можно помочь...               */
+      End;
+      SetParm(2, CurrentItem-1);              /* Вверх по пунктам                        */
+      Return CurrentString;                   /* Строка та же                            */
+    End;
+    If ( Delta == -TotalString )              /* Смелый юзер нажал клавишу PgUp          */
+      If (CurrentString+Delta>=0)             /* Можно скрольнуть вверх                  */
+        CurrentString = CurrentString+Delta;  /* Скролируемся вверх                      */
+        SetParm(2, CurrentString);            /* Перемещаем активный элемент на страницу */
+        Return CurrentString;                 /* Это новая первая строка                 */
+      End;                                    /* Первый элемент достигнут                */
+      SetParm(2, 0);                          /* Знакомьтесь: первый элемент             */
+      Return 0;                               /* Вот на него и встанем                   */
+    End;
+  End;
+  If ( Delta>0 )                              /* Попытка движения вниз                   */
+    If (Delta == 1 )                          /* Движение на шажок                       */
+      If (SelectedString == TotalString-1)    /* Мы у последней черты                    */
+        If ( CurrentString+TotalString <TotalItems) /* Последний элемент не достигнут    */
+          SetParm(2, CurrentItem+1);          /* Вверх по пунктам                        */
+          Return CurrentString+1;             /* Вверх по строкам                        */
+        End;                                  /* Мы в самом низу. Упс...                 */
+        Return CurrentString;                 /* Что делать...                           */
+      End;
+      SetParm(2, CurrentItem+1);              /* Вниз по пунктам                         */
+      Return CurrentString;                   /* А верхняя строка та же                  */
+    End;
+    If ( Delta == TotalString )               /* Юзер надавил PgDn. Чего-то ждет         */
+      If (CurrentString+Delta<=TotalItems-Delta) /* Можно провернуть экран               */
+        CurrentString = CurrentString + Delta;/* Проворачиваем экран                     */
+        SetParm(2, CurrentString);            /* Новая активная строка                   */
+        Return CurrentString;
+      End;
+      CurrentString = TotalItems-Delta;       /* Мы у последней черты                    */
+      SetParm(2, TotalItems-1);               /* Знакомьтесь: последняя черта            */
+      Return CurrentString;
+    End;
+  End;
+
+  Return CurrentString;
+END;
+
+/* *** */
+MACRO kvnEdit(pLeft, pTop, pRight, pBottom, pText, pColor, pFColor, 
+              pInsertMode, pMaxLen, pEvProc, pKeyCode, ctrl, IsPsw);
+
+  Var 
+    CurType = GetCursorType, 
+    NextOk  = True, 
+    ev     : TkvnEvent = TkvnEvent,           /* Элемент класса обработчика событий      */
+    CurX    = pLeft, 
+    CurY    = pTop, 
+    Width   = pRight  - pLeft + 1, 
+    Height  = pBottom - pTop  + 1, 
+    aStr    = TArray, 
+    off     = 0,
+    cnt     = 0, 
+    StrPsw  = "", 
+    OldVal  = pText, 
+    ii, jj, kk, 
+    valid;
+
+  MACRO kvnDrawStr (Left, dy, cStr,   pColor, pFColor, len);
+    Private var tmp = "";
+    If (IsPsw)
+           ii = 0; While (ii<len) tmp = tmp + "*"; ii = ii + 1; End;
+           DrawStr (Left, dy, tmp, pColor, pFColor, len);
+    Else
+           DrawStr (Left, dy, cStr,   pColor, pFColor, len);
+    End;
+  END;
+
+  MACRO BuildArray;                           /* MACRO kvnEdit: Строим массив            */
+    Var s  = pText, ch, CurStr, i = 1, ls = 0;
+
+    If (Height==1) cnt = 0; off = 1; Return True; End;
+
+    off = 0; cnt = 0; aStr[cnt] = "";
+    While (i <= StrLen(s))
+      ch = SubStr(s, i, 1);
+      If (ch == "\n") 
+        cnt = cnt + 1; ls = 0; aStr[cnt] = "";
+      Else
+        aStr[cnt] = aStr[cnt] + ch;
+        ls = ls + 1;
+        If (ls == Width) cnt = cnt + 1; ls = 0; aStr[cnt] = ""; End;
+      End;
+      i = i + 1;
+    End;
+  END;
+
+  MACRO BuildString                           /* MACRO kvnEdit: Строим строку            */
+    Var i = 0, s= "";
+
+    If (Height==1) Return OldVal; End;
+ 
+    While (i<=cnt)
+      s = s + aStr[i];
+      If (StrLen(aStr[i])<Width) s = s + "\n"; End;
+      i = i + 1;
+    End;
+    Return s;
+  END;
+
+  MACRO PrintArray1;
+    Var i = 0, s= "";
+
+    While (i<=cnt)
+      If (s!="") s = s + "|"; End;
+      s = s + aStr[i];
+      i = i + 1;
+    End;
+    kvnMsgBox(s);
+  END;
+
+  MACRO ClearField
+    FillRect(pLeft, pTop, pRight, pBottom, pColor, pFColor, 32); 
+  END;
+
+
+  MACRO PrintString(idx, dy);
+    If (dy>pBottom) Return False; End;
+    If (Height==1) aStr[0] = SubStr(OldVal, off, Width); End; 
+    FillRect( pLeft, dy, pRight, dy, pColor, pFColor, 32); 
+    kvnDrawStr ( pLeft, dy, aStr[idx], pColor, pFColor, StrLen(aStr[idx]));
+  END;
+
+  MACRO PrintArray;
+    Var i = 0, s= "";
+    If (Height==1) PrintString(0, CurY); Return; End;
+
+    ClearField;
+    While ((i+off<=cnt) And (i<Height))
+      kvnDrawStr (pLeft, pTop+i, aStr[i+off], pColor, pFColor, StrLen(aStr[i+off]));
+      i = i + 1;
+    End;
+  END;
+
+  MACRO SetInsertMode(pVal)
+    If (pVal) 
+      pInsertMode = True;
+      SetCursorType(BarCursor);
+    Else
+      pInsertMode = False;
+      SetCursorType(NormCursor);
+    End;
+  END;
+
+  MACRO SetCursor(x, y);
+    Var i;
+
+    If (x>pRight) x = pRight; End;
+    If (Height>1) 
+      i = pLeft+StrLen(aStr[y-pTop+off]);  /* Максимальная позиция строки             */
+      If (x>i) x = i; End;
+    End;
+
+    CurX = x;
+    CurY = y;
+    SetCursorPos(CurX, CurY);
+  END;
+
+  MACRO ScrollUp;
+    off = off + 1;
+    RectVerScroll( pLeft, pTop, pRight, pBottom, 1);
+    FillRect     ( pLeft, pBottom, pRight, pBottom, pColor, pFColor, 32); 
+    kvnDrawStr      ( pLeft, pBottom, aStr[CurY-pTop+off], pColor, pFColor, StrLen(aStr[CurY-pTop+off]));
+  END;
+
+  MACRO ScrollDown;
+    off = off - 1;
+    RectVerScroll( pLeft, pTop, pRight, pBottom, -1);
+    FillRect     ( pLeft, pTop, pRight, pTop, pColor, pFColor, 32); 
+    kvnDrawStr      ( pLeft, pTop, aStr[CurY-pTop+off], pColor, pFColor, StrLen(aStr[CurY-pTop+off]));
+  END;
+
+  MACRO MoveCursor(x, y);
+    Var i;
+    If (x<0)
+      If (Height==1) 
+        If (CurX+x>=pLeft)     SetCursor(CurX+x, CurY); Return True; End; 
+        If (off>1)                     off = off-1;     PrintString(0, CurY); End; 
+        Return True;
+      End;
+
+      If (CurX+x>=pLeft)     SetCursor(CurX+x, CurY);   Return True; End; 
+      If (CurY  > pTop )     SetCursor(pRight, CurY-1); Return True; End;
+      If (off>0) ScrollDown; SetCursor(pRight, CurY);   Return True; End;
+      Return False;
+    End;
+
+    If (x>0)                                  /* Нужно идти вправо                       */
+      If (Height==1)
+        If (CurX+x<=pRight) 
+          If (StrLen(aStr[0])>=CurX+x-pLeft) SetCursor(CurX+x, CurY); End;
+          Return True; 
+        End;
+        If (off+Width<=StrLen(OldVal)+1) off = off + 1; PrintString(0, CurY); End;
+        Return True;
+      End;
+
+      If (CurX+x<=pRight)                     /* Не дошли до границы                     */
+        i = pLeft+StrLen(aStr[CurY-pTop+off]);/* Максимальная позиция строки             */
+        If (i-CurX-x>=0) SetCursor(CurX+x, CurY); Return True; End; /* Мы ее не перешли  */
+      End; 
+      If (CurY-pTop+off<cnt)                  /* Можно идти вниз                         */
+        If (CurY-pTop+1<Height) SetCursor(pLeft, CurY+1); Return True; End;
+        ScrollUp;
+        SetCursor(pLeft, CurY);
+        Return True;
+      End;
+      Return False;
+    End;
+
+    If (Height==1) Return False; End;
+ 
+    If (y<0)
+      If (CurY+y>=pTop)         SetCursor(CurX, CurY+y);  Return True; End;
+      If (off>0) ScrollDown;    SetCursor(CurX, CurY);    Return True; End;
+      Return False;
+    End;
+
+    If (y>0)
+      If ((CurY+y<=pBottom) And (CurY-pTop+off<cnt))
+        SetCursor(CurX, CurY+y); 
+        Return True;  
+      End;
+
+      If (CurY-pTop+off<cnt) ScrollUp; SetCursor(CurX, CurY); Return True; End;
+      Return False;
+    End;
+
+    Return False;
+
+  END;
+
+  MACRO DelString(idx, vPrint);
+    Var i = idx;
+    While (i<cnt)
+      aStr[i] = aStr[i+1];
+      i = i + 1;
+    End;
+    aStr[cnt] = ""; cnt = cnt - 1;
+    If ((vPrint==Null) Or (vPrint)) PrintArray; End;
+  END;
+
+  MACRO RebuildStr(idx)
+    Private Var s, ch, i=1;
+
+    If (idx+1>cnt) Return False; End;         /* Неоткуда заимствовать                   */
+
+    s = aStr[idx] + aStr[idx+1];
+    While (i <= StrLen(s))
+      ch = SubStr(s, i, 1);
+      If (ch == "\n") 
+        aStr[idx]   = SubStr(s, 1, i-1);
+        aStr[idx+1] = SubStr(s, i+1);
+/*        kvnMsgBox("Enter:",aStr[idx], "|", aStr[idx+1] );*/
+        Return True;
+      End;
+      If (i==Width)
+        aStr[idx]   = SubStr(s, 1, i);
+        aStr[idx+1] = SubStr(s, i+1);
+/*        kvnMsgBox("Width:",aStr[idx], "|", aStr[idx+1] );*/
+        Return True;
+      End;
+      i = i + 1;
+    End;
+    aStr[idx]   = s;
+    aStr[idx+1] = "";
+/*    kvnMsgBox("All:",aStr[idx], "|", aStr[idx+1] );*/
+    Return False;
+
+  END;
+
+  MACRO RebuildStr1(idx)
+    Private Var s, ch, i=1, nn;
+
+    s = aStr[idx];
+    While (i <= StrLen(s))
+      ch = SubStr(s, i, 1);
+
+
+      If (ch == "\n") 
+        aStr[idx]   = SubStr(s, 1, i-1);
+        If (idx+1<=cnt) 
+          aStr[idx+1] = SubStr(s, i+1) + aStr[idx+1];
+        Else
+          aStr[idx+1] = SubStr(s, i+1);
+          cnt         = idx + 1;
+        End;
+/*       kvnMsgBox("Enter:",aStr[idx], "|", aStr[idx+1] );*/
+        Return True;
+      End;
+      If (i==Width)
+        aStr[idx]   = SubStr(s, 1, i);
+        If (idx+1<=cnt) 
+          aStr[idx+1] = SubStr(s, i+1) + aStr[idx+1];
+        Else
+          aStr[idx+1] = SubStr(s, i+1);
+          cnt         = idx + 1;
+        End;
+/*        kvnMsgBox("Width:",aStr[idx], "|", aStr[idx+1] );*/
+        Return True;
+      End;
+      i = i + 1;
+    End;
+    aStr[idx]   = s;
+/*    kvnMsgBox("All:",aStr[idx], "|", aStr[idx+1] );*/
+    Return False;
+  END;
+
+  MACRO DelSymbol;
+    Var CurPosX, i;
+    CurPosX = CurX - pLeft + 1;               /* Позиция в текущей строке                */
+
+    If (Height == 1)
+      i = SubStr(OldVal, 1, off+CurPosX-2) + SubStr(OldVal, off+CurPosX); /* Вырезали символ */
+      OldVal = i;
+      PrintString(0, CurY);
+      Return;
+    End;
+
+    If (CurPosX<=StrLen(aStr[CurY-pTop+off])) /* Конец строки не достигнут               */
+      aStr[CurY-pTop+off] = SubStr(aStr[CurY-pTop+off], 1, CurPosX-1) + 
+                            SubStr(aStr[CurY-pTop+off], CurPosX+1); /* Вырезали символ   */
+      If (StrLen(aStr[CurY-pTop+off])==0)     /* В строке больше ничего не осталось      */
+        DelString(CurY-pTop+off);             /* Удалим ее из массива и перерисуем       */
+        Return True;
+      End;                                    /* В строке еще что-то осталось            */
+      If ((StrLen(aStr[CurY-pTop+off])+1==Width) And
+         (CurY-pTop+off<cnt))                 /* Нужен перенос символа со след. строки   */
+        aStr[CurY-pTop+off] = aStr[CurY-pTop+off] + SubStr(aStr[CurY-pTop+off+1], 1, 1);
+        PrintString(CurY-pTop+off, CurY);     /* Напечатали текущую строку               */
+        If (StrLen(aStr[CurY-pTop+off+1])>1)  /* От следующей строки еще что-то осталось */
+          aStr[CurY-pTop+off+1] = SubStr(aStr[CurY-pTop+off+1], 2); /* Вырезка 1 символа */
+          PrintString(CurY-pTop+off+1, CurY+1);/* Напечатали следующую строку            */
+          Return True;
+        End;                                  /* От следующей строки ничего не осталось  */
+        DelString(CurY-pTop+off+1);           /* Удалим ее и все дела                    */
+        Return True;
+      End;
+      PrintString(CurY-pTop+off, CurY);       /* Напечатали текущую строку               */
+      Return True;
+    End;                                      /* Достигнут конец строки                  */
+    If (CurY-pTop+off>=cnt)                   /* Следующая строка отсутствует.           */
+      Return False;
+    End;                                      /* Нужен перенос символов со след. строк   */
+
+    i = 0;
+    While (CurY-pTop+off+i<cnt) 
+      RebuildStr(CurY-pTop+off+i);
+      PrintString(CurY-pTop+off+i, CurY+i);
+      i = i + 1;
+    End;
+    PrintString(cnt, CurY+i);
+    While (aStr[cnt]=="") cnt = cnt - 1; End;
+    Return True;
+
+  END;
+
+  MACRO EnterString;
+    Var i = cnt, s = "";
+    If (Height==1) Return False; End;         /* Это однострочный TEdit. Все в сад       */
+    i = CurX - pLeft + 1;
+    If (i>0) s = SubStr(aStr[CurY-pTop+off], 1, i-1); End;
+    aStr[CurY-pTop+off] = SubStr(aStr[CurY-pTop+off], i);
+
+    cnt = cnt + 1;
+    i = cnt;
+    While (i>CurY-pTop+off)
+      aStr[i] = aStr[i-1];
+      i = i - 1;
+    End;
+    aStr[CurY-pTop+off] = s; 
+    PrintArray;
+    MoveCursor(0, 1);
+    SetCursor(pLeft, CurY);
+  END;
+
+  MACRO InsertSymbol(ch);
+    Private Var 
+      CurPosX = CurX - pLeft + 1,             /* X-позиция курсора                       */
+      NewStr, 
+      pos,    
+      MyOff, 
+      NextOk, 
+      i;
+
+    If (pInsertMode)                          /* Включен режим замены символов           */
+      If (Height == 1)                        /* Однострочный контрол                    */
+        NewStr = SubStr(OldVal, 1, off+CurPosX-2) + Ch + 
+            SubStr(OldVal, off+CurPosX);      /* Заменили один символ                    */
+        If (StrLen(NewStr)>pMaxLen) 
+          kvnMsgBox("Длина строки превышает ", pMaxLen, " символов");
+          Return False;
+        End; 
+        OldVal = NewStr;                      /* Запомним новую строку                   */
+        pos = 0;                              /* Отрисовка с первой позиции              */
+      Else                                    /* Многострочный контрол                   */
+        pos =  CurY-pTop+off;                 /* Позиция курсора в текущей строке        */
+        aStr[pos] = SubStr(aStr[pos], 1, CurPosX-1) + Ch +
+                    SubStr(aStr[pos], CurPosX+1); /* Заменили один символ                */
+      End;
+      PrintString(pos, CurY);                 /* Нарисовали строку                       */
+      MoveCursor(1, 0);                       /* Двинулись дальше                        */
+      Return True;                            /* До свидания                             */
+    End;                                      /* Включен режим вставки символов          */
+    If (Height == 1)                          /* Однострочный контрол                    */
+      NewStr = SubStr(OldVal, 1, off+CurPosX-2) + Ch + 
+          SubStr(OldVal, off+CurPosX-1);      /* Добавили символ                         */
+      If (StrLen(NewStr)>pMaxLen)             /* Проверили на ограничение по длине       */
+        kvnMsgBox(">Длина строки превышает ", pMaxLen, " символов");
+        Return False;
+      End;
+      OldVal = NewStr;                        /* Запомним новую строку                   */
+      PrintString(0, CurY);                   /* Отрисовка строки                        */
+      MoveCursor(1, 0);                       /* Двинулись дальше по строке              */
+      Return True;                            /* До свидания                             */
+    End;                                      /* Это многострочный контрол               */
+
+    MyOff = CurY-pTop+off;                    /* Индекс текущей строки                   */
+    NewStr = SubStr(aStr[MyOff], 1, CurPosX-1) + Ch + SubStr(aStr[MyOff], CurPosX);
+
+    If (StrLen(aStr[MyOff])<Width)            /* Строка еще не забита до края            */
+      aStr[MyOff] = NewStr;                   /* Добавили символ и запомнили строку      */
+      PrintString(MyOff, CurY);               /* Перерисовали строку                     */
+      MoveCursor(1, 0);                       /* Двинулись дальше                        */
+      Return True;                            /* До свидания                             */
+    End;                                      /* Строка забита до края                   */
+    aStr[MyOff] = NewStr; /*SubStr(NewStr, 1, StrLen(NewStr)-1);*/
+    i = 0;
+    NextOk = True;
+    While ((MyOff+i<=cnt) And (NextOk))
+      NextOk = RebuildStr1(MyOff+i);
+      PrintString(MyOff+i, CurY+i);
+      i = i + 1;
+    End;
+    If (NextOk) PrintString(MyOff+i, CurY+i); End;
+    MoveCursor(1, 0);
+
+    Return True;
+
+  END;
+
+  MACRO Events;
+    NextOk = True;
+    While (NextOk)                              /* Гоняем цикл отработки событий           */
+      ev.clearEvent;                            /* Очистили стэк событий                   */
+      If (pKeyCode!=Null) 
+        ev.KeyDown = True; ev.KeyCode = pKeyCode; pKeyCode   = Null;
+      Else
+        ev.getEvent;                            /* Пытаемся получить новое событие         */
+      End;
+      If (ev.KeyDown)                           /* Нажата клавиша                          */
+        If ((ValType(pEvProc)==20) Or (pEvProc!=Null)) /* Имеется пользуновский обработчик */
+          If (Height==1) ii = OldVal; Else ii = pText; End;
+          kk = ii;
+          jj = ExecMacro2(pEvProc, Ev.KeyCode, ii); /* Запускаем пользуновскую процедуру   */
+          If (jj!=Null) Return jj; End;         /* Вернулся не Null, заканчиваем работу    */
+          If (ii!=kk)                           /* Польз. обработчик что-то поменял        */
+            If (Height==1)
+              OldVal = ii;
+              off    = 1; CurX = pLeft;
+              PrintString(0, CurY);
+              SetCursor(CurX, CurY);
+            Else
+              pText  = ii;
+              BuildArray;
+              PrintArray;
+              SetCursor(pLeft, pTop);
+            End;
+          End;      
+        End;
+        If (ev.KeyCode == kbEsc) NextOk = False;/* Это ESC До свиданья, дорогие!           */
+        Elif ((ev.KeyCode == kbTab) Or (ev.KeyCode == kbShiftTab)) NextOk = False;
+        Elif (ev.KeyCode == kbIns)         SetInsertMode(Not pInsertMode);
+        Elif (ev.KeyCode == kbEnd)
+          If ((Height==1) And (StrLen(OldVal)>Width)) 
+            off = StrLen(OldVal)-Width+1; 
+            PrintString(0, CurY); 
+          End;
+          SetCursor(pRight,CurY); 
+        Elif (ev.KeyCode == kbHome)
+          If ((Height==1) And (off>1)) off = 1; PrintString(0, CurY); End; 
+          SetCursor(pLeft,CurY); 
+        ElIf (ev.KeyCode == kbLeft)        MoveCursor(-1, 0);
+        ElIf (ev.KeyCode == kbRight)       MoveCursor(1, 0);
+        ElIf (ev.KeyCode == kbDown)        
+          If (Height==1) 
+            NextOk = False; 
+	    ev.KeyCode = kbTab;
+          Else 
+            MoveCursor(0, 1); 
+          End;
+        ElIf (ev.KeyCode == kbUp)          
+          If (Height==1) 
+            NextOk = False; 
+	    ev.KeyCode = kbShiftTab;
+          Else 
+            MoveCursor(0, -1); 
+          End;
+        Elif (ev.KeyCode == kbDel)         DelSymbol;
+        Elif (ev.KeyCode == kbBack)        MoveCursor(-1, 0); DelSymbol;
+        Elif (ev.KeyCode == kbCtrlEnter)   EnterString;
+        Elif (ev.KeyCode == kbEnter)       NextOk = False; 
+        ElIf ((Ev.KeyCode>=32) And (Ev.KeyCode<=254)) InsertSymbol(StrFor(Ev.KeyCode));
+        End;
+
+      End;
+    End;
+  END;
+
+  If (IsPsw == Null) IsPsw = False; End;
+
+  If (IsPsw) 
+    ii = 0; 
+    StrPsw = "";
+    While (ii<pMaxLen) 
+      StrPsw = StrPsw + "*"; 
+      ii = ii + 1; 
+    End;
+  End;
+
+  If (pColor      == Null) pColor      = WHITE; End;
+  If (pFColor     == Null) pFColor     = BLUE;  End;  /* Цвет фона                       */
+  If (pInsertMode == Null) pInsertMode = True;  End;
+  If (pMaxLen     == Null) pMaxLen     = 99999; End;
+
+  PushScreen( 0, ScreenSizeY-1, ScreenSizeX-1, ScreenSizeY-1 ); /* StatusLine            */
+  PushScreen(pLeft, pTop, pRight, pBottom);   /* Запомнили экран под будущим меню        */
+
+  FillRect(pLeft, pTop, pRight, pBottom, pColor, pFColor, 32); /* Внутренности           */
+  SetInsertMode(pInsertMode);
+  SetCursor(CurX, CurY);
+  BuildArray;
+  PrintArray;
+
+  valid = 1;
+  While (valid!=Null)                         /* Пока не добьемся валидного значения     */
+    ii = Null;
+    Events;
+    If (ev.KeyCode==kbEsc)                    /* Нажат ESC                               */
+      valid = Null;                           /* Валидное значение                       */
+    Else                                      /* Нажато что-то другое                    */
+      ii =BuildString;                        /* Получили новое значение                 */
+      If (ctrl==Null)                         /* Ничего проверять не нужно               */
+        valid = Null;                         /* Значение валидно                        */
+      Else
+        jj = ctrl.Text();                     /* Запомним, что хранилось в поле          */
+        ctrl.Text(ii, False);                 /* Пытаемся установить новое значение      */
+        If (ctrl.VerifyValids!=Null)          /* Новое значение не валидно               */
+          ctrl.Text(jj, False);               /* Возвращаем старое кошерное значение     */
+        Else
+          valid = Null;                       /* Значение валидно                        */
+        End;
+      End;
+    End;
+  End;
+
+  If (ii!=Null) SetParm(4, ii); End;
+  ii = Ev.KeyCode;
+
+  PopScreen;                                  /* Вернули все на место                    */
+  PopScreen;
+  SetCursorType(CurType);
+  Return ii;
+
+END;
+
+/* *** */
+MACRO kvnMenu(arr, prompt, title, left, top, Ch, right, bottom) /* Рисуем суперменю      */
+  Const 
+    MinX = 1,                                 /* Меньше по Х низзя                       */
+    MinY = 1,                                 /* Меньше по Y низзя                       */
+    MaxX = ScreenSizeX()-2,                   /* Больше по Х низзя                       */
+    MaxY = ScreenSizeY()-2;                   /* Больше по Y низзя                       */
+
+  Var
+    vColorSelStr   = BLACK, 
+    vBColorSelStr  = GREEN, 
+    vColorStr      = BLACK, 
+    vBColorStr     = LIGHTGRAY, 
+    vColorSelMulty = YELLOW, 
+    vColorMulty    = RED;
+
+  Var 
+    asz         = kvnGetArrSize(arr),         /* Размер массива                          */
+    MaxLenInArr = 0,                          /* Длиннейший элемент массива              */
+    TotalCol,                                 /* Всего столбцов                          */
+    TotalRow,                                 /* Всего строк                             */
+    PosTitle,                                 /* Позиция заголовка                       */
+    CurStr,                                   /* Отрисовываемая строка                   */
+    ii, 
+    NextOk, 
+    OldOff      = -9999, 
+    OldCh       = -9999, 
+    VeryTop, 
+    SecondStr   = "", 
+    CurType;
+
+  If ((not GetParm(1, ii)) Or (prompt==Null)) /* Чистим недополученные от ленивого юзера */  
+    If (MultySelectForKvnMenu) 
+      prompt = "~ESC~-Выход ~Space~-Отметить ~Enter~-Выбор ";     /*     переменные                          */
+    Else
+      prompt = "~ESC~-Выход ~Enter~-Выбор ";     /*     переменные                          */
+    End;
+  End;                                        
+
+  If ((not GetParm(2, ii)) Or (title==Null)) 
+    title  = " Меню "; 
+  End; 
+
+  MACRO FindString(cStr)
+    Private var 
+      i  = Ch+1, 
+      Tr = True;
+
+    While (i<asz)
+      If (Index(arr[i], cStr)>0) Ch = i; Return True; End;
+      i = i + 1;
+    End; 
+    If (Not GetTrue(Tr, "Достигнута последняя запись. Продолжить поиск с первой записи по текущую?")) 
+      Return False;
+    End;
+    i = 0;
+    While (i<=Ch)
+      If (Index(arr[i], cStr)>0) Ch = i; Return True; End;
+      i = i + 1;
+    End; 
+    Return False;
+  END;
+
+  MACRO PrintPercent(vv)
+    Var percent;
+ 
+    If ((MultySelectForKvnMenu) And (OldCh>=0) And (ArraySelectForKvnMenu[OldCh])) 
+      DrawStr(left+1, top+OldCh-CurStr+1, "√", vColorMulty, vBColorStr, 1); 
+    End;
+
+    If ((MultySelectForKvnMenu) And (Ch>=0) And (ArraySelectForKvnMenu[Ch])) 
+      DrawStr(left+1, top+Ch-CurStr+1, "√", vColorSelMulty, vBColorSelStr, 1); 
+    End;
+
+    Frame(left, VeryTop, right, bottom, DoubleFrame, BLACK, LIGHTGRAY);   /* Рамка           */
+    If (title!=Null) DrawStr( PosTitle, VeryTop, title, BLACK, LIGHTGRAY); End; /* Загол-к   */
+    If ((ShowPercentForKvnMenu) And (asz>TotalRow)) /* Может, нарисовать градусник       */
+      percent = (Ch*100.0)/(asz-1);           /* Вычислили процент                       */
+      percent = Int((TotalRow-1)*percent/100);/* Перевели его в безусловные единицы      */
+      DrawStr(right, top+percent+1, "■", BLACK, LIGHTGRAY); /* Нарисовали                */
+      /*If (CurStr>0) DrawStr(right, top+1, " ", BLACK, LIGHTGRAY); End; */
+    End;
+
+    If (GridKindForKvnMenu) 
+      DrawStr(left+1, VeryTop + 1, GridCaptForKvnMenu, vColorStr, vBColorStr, TotalCol); 
+      DrawStr(left+1, VeryTop + 2, SecondStr,          vColorStr, vBColorStr, TotalCol); 
+    End;
+  END;
+
+  MACRO PrintArray(vv);                       /* kvnMenu: Печать массива                 */
+    Var i = 0, s;
+    Var col1, col2, col3;
+
+    If (vv!=Null) i = vv; End;
+ 
+    While (i<TotalRow)                        /* Бежим по строкам                        */
+      s = arr[CurStr+i];
+      If ( MultySelectForKvnMenu ) s = "  " + s; End; /* Место для галочки               */
+      While ( StrLen(s)<TotalCol ) s = s + " "; End; 
+      If ( CurStr + i == Ch )                 /* Текущая строка является выбранной       */
+        col1 = vColorSelStr; 
+        col2 = vBColorSelStr;     
+        col3 = vColorSelMulty;
+      Else                                    /* Текущая строка не является выбранной    */
+        col1 = vColorStr; 
+        col2 = vBColorStr;
+        col3 = vColorMulty;
+      End;
+      DrawStr( left+1, top+i+1, s, col1, col2, TotalCol); /* Рисуем текущую строку       */
+      If ((MultySelectForKvnMenu) And (ArraySelectForKvnMenu[CurStr+i])) 
+        DrawStr(left+1, top+i+1, "√", col3, col2, 1); /* Рисуем галочку                  */ 
+      End;
+      i = i + 1;                              /* Следующий! - Кричит заведующий          */
+      If (vv!=Null) i = TotalRow; End; 
+    End;
+    PrintPercent;
+  END;
+
+  MACRO PrintMenu;                            /* kvnMenu: Печать меню                    */
+    Var i;
+    If (CurStr == OldOff)                     /* Частичная перерисовка                   */
+      If (Ch==OldCh) Return False; End;
+      i = Top+OldCh-CurStr+1;
+      RectColorChange(Left+1, i, Right-1, i, vColorStr, vBColorStr);
+
+      i = Top+Ch-CurStr+1;
+      RectColorChange(Left+1, i, Right-1, i, vColorSelStr, vBColorSelStr);
+      PrintPercent;
+    ElIf (CurStr+1 == OldOff)                 /* Скроллинг вверх                         */
+      RectColorChange(Left+1, Top+1, Right-1, Top+1, vColorStr, vBColorStr);
+      RectVerScroll(Left+1, Top+1, Right-1, Bottom-1, -1);
+      PrintArray(Ch-CurStr);
+    ElIf (CurStr-1 == OldOff)                 /* Скроллинг вниз                          */
+      RectColorChange(Left+1, Bottom-1, Right-1, Bottom-1, vColorStr, vBColorStr);
+      RectVerScroll(Left+1, Top+1, Right-1, Bottom-1, 1);
+      PrintArray(Ch-CurStr);
+    Else
+
+      Frame(left, VeryTop, right, bottom, DoubleFrame, BLACK, LIGHTGRAY);   /* Рамка         */
+      FillRect(left+1, VeryTop+1, right-1, bottom-1, BLACK, LIGHTGRAY, 32); /* Внутренности  */
+      PrintArray;                             /* Содержимое                              */
+    End;
+    OldOff = CurStr;
+    OldCh  = Ch;
+
+  END;
+
+  MACRO Prepare;                              /* kvnMenu: Рассчитываем положение меню    */
+    Private Var ii;
+
+    If (prompt != Null) Message(prompt); End; /* Вывели текст в строке сообщений         */
+
+    MaxLenInArr = kvnGetMaxLenInArray(arr);   /* Самая длинная строка массива            */
+
+    If (MultySelectForKvnMenu) 
+      MaxLenInArr = MaxLenInArr + 2;          /* Место для галочки                       */
+    End;
+    If ((left==Null) Or ( left<MinX) Or ( left>MaxX)) /* Нужно самим задавать LEFT       */
+      If (MaxLenInArr>MaxX)                   /* Строка не влезает                       */
+        left = MinX;                          /* Поэтому будем рисовать от края          */
+      Else                                    /* Строка влезает на страницу              */
+        left  = (MaxX-MaxLenInArr)/2;         /* Будем центровать пустые строки          */
+        right = left + MaxLenInArr + 1;       /* Вычисляем, до каких пор рисовать        */
+      End;
+    End;
+    If ((top==Null) Or (top<MinY) Or (top>MaxY)) /* Нужно самим задавать TOP             */
+      If ( asz>MaxY )                         /* Все строки не влезают                   */
+        top = MinY;                           /* Поэтому будем рисовать от края          */
+      Else                                    /* Все строки влезают на страницу          */
+        top    = (MaxY-asz)/2;                /* Будем центровать пустые строки          */
+        bottom = top + asz + 1;               /* Вычисляем, до каких пор рисовать        */
+      End;
+    End;
+
+    VeryTop = top; 
+    If (GridKindForKvnMenu) 
+      top = top + 2; 
+      If (MultySelectForKvnMenu) GridCaptForKvnMenu = "  " + GridCaptForKvnMenu; End; 
+    End;
+
+    If ((right == Null) Or (right<MinX) Or (right>MaxX)) /* Нужно самим задавать RIGHT   */
+      right = MaxX;                           /* Если он еще не задан - к краю           */
+    End; 
+    If ((bottom == Null) Or (bottom<MinY) Or (bottom>MaxY) or (bottom>top+asz))  
+      ii = top+asz+1;                         /* Нужно самим задавать BOTTOM             */
+      If ( ii>MaxY )
+        bottom = MaxY;
+      Else 
+        bottom = top+asz+1;                   /* Если он не задан - по максимуму .       */
+      End;
+    End; 
+
+    If ((Ch == Null) Or (Ch<0) Or (Ch>=asz)) Ch = 0; End; /* Нужно самим задавать Ch     */
+    TotalCol = right  - left - 1;             /* Всего столбцов                          */
+    TotalRow = bottom - top  - 1;             /* Всего строк                             */
+
+    If ( title!=Null )                        /* Нужно рассчитывать полож. загол.        */
+      If (StrLen(title)>TotalCol)             /* Заголовок не влезает                    */
+        title = SubStr(title, 1, TotalCol); 
+      End;  
+      PosTitle = left + (TotalCol-StrLen(title))/2+1; /* Вычислим позицию заголовка      */
+    End;
+    CurStr = kvnGetCurStrForScroll(TotalRow, asz, Ch);
+
+    If (GridKindForKvnMenu) 
+      While (StrLen(GridCaptForKvnMenu)<TotalCol) 
+        GridCaptForKvnMenu = GridCaptForKvnMenu + " ";
+      End;
+      ii = 1; SecondStr = "";
+      While (ii<=TotalCol)
+        If (SubStr(GridCaptForKvnMenu, ii, 1)=="|")
+          SecondStr = SecondStr + "|";
+        Else
+          SecondStr = SecondStr + "-";
+        End;
+        ii = ii + 1;
+      End;
+    End;
+
+  END;
+
+  PushScreen( 0, ScreenSizeY-1, ScreenSizeX-1, ScreenSizeY-1 ); /* StatusLine            */
+  Prepare;                                    /* Рассчитали положение меню               */
+  PushScreen(0, 0, ScreenSizeX-1, ScreenSizeY-1);       /* Запомнили экран под будущим меню        */
+  PrintMenu;                                  /* Вывели меню на экран                    */
+  CurType = GetCursorType;
+  SetCursorType(NoCursor);
+  NextOk = True;
+  While (NextOk)                              /* Гоняем цикл отработки событий           */
+    _clearEvent;                              /* Очистили стэк событий                   */
+    _getEvent;                                /* Пытаемся получить новое событие         */
+    If (_evKeyDown)                           /* Нажата клавиша                          */
+      If (_KeyCode == kbEsc)                  /* Это ESC                                 */
+        Ch     = -1;                          /* Ну тады ничего не выбрано               */
+        NextOk = False;                       /* До свиданья, дорогие!                   */
+      ElIf (_KeyCode == kbEnter)              /* Это клавиша Enter                       */
+        NextOk = False;                       /* Тоже до свидания                        */
+      ElIf (_KeyCode == kbUp)                 /* Стрелка вверх                           */
+        CurStr = kvnGetCurStrForScroll(TotalRow, asz, Ch, CurStr, -1); /* Скроллинг?     */
+        PrintMenu;                            /* Перерисовали меню                       */
+      ElIf (_KeyCode == kbHome)               /* В начало страницы                       */
+        Ch = CurStr;
+        PrintMenu;                            /* Перерисовали меню                       */
+      ElIf (_KeyCode == kbEnd)                /* В конец страницы                        */
+        Ch = CurStr+TotalRow-1;
+        PrintMenu;                            /* Перерисовали меню                       */
+      ElIf (_KeyCode == kbPgUp)               /* Это PageUp                              */
+        CurStr = kvnGetCurStrForScroll(TotalRow, asz, Ch, CurStr, -TotalRow); /* Скрол.  */
+        PrintMenu;                            /* Перерисовали меню                       */
+      ElIf (_KeyCode == kbDown)               /* Стрелка вниз                            */
+        CurStr = kvnGetCurStrForScroll(TotalRow, asz, Ch, CurStr, 1); /* Скроллинг?      */
+        PrintMenu;                            /* Перерисовали меню                       */
+      ElIf (_KeyCode == kbPgDn)               /* Это Page Down                           */
+        CurStr = kvnGetCurStrForScroll(TotalRow, asz, Ch, CurStr, TotalRow); /* Скрол.   */ 
+        PrintMenu;                            /* Перерисовали меню                       */
+      ElIf ((_KeyCode == kbSpace) And (MultySelectForKvnMenu))
+        If (ArraySelectForKvnMenu[Ch]) 
+          ArraySelectForKvnMenu[Ch] = False;  /* Стираем галочку                         */
+          DrawStr(left+1, top+Ch-CurStr+1, " ", vColorSelMulty, vBColorSelStr, 1); 
+        Else
+          ArraySelectForKvnMenu[Ch] = True;   /* Рисуем галочку                          */
+          DrawStr(left+1, top+Ch-CurStr+1, "√", vColorSelMulty, vBColorSelStr, 1); 
+        End;
+      ElIf (_KeyCode == kbF4)                 /* Поиск пункта                            */
+        If (GetString(ii, "Введите строку поиска", "Введите строку поиска"))
+          If (FindString(ii))
+            OldOff = -9999;
+            CurStr = kvnGetCurStrForScroll(TotalRow, asz, Ch);       /* Скрол.           */ 
+            PrintMenu;                            /* Перерисовали меню                   */
+          End;
+        End;
+      End;
+    End;
+    If (_evMouseUp)                           /* Нажата клавиша мыши                     */
+      If ( _MouseButton == MouseLeftButton)   /* И не какая-нибудь, а левая              */
+        If ((_MouseX>=left) And (_MouseX<=right) And (_MouseY>top) And (_MouseY<bottom)) 
+          Ch = CurStr+_MouseY-top-1;          /* Попали в меню. Считаем новый выбр.пункт */
+          PrintMenu;                          /* Перерисовали меню                       */
+        End;
+      End;
+    End;
+  End;
+  PopScreen;                                  /* Вернули все на место                    */
+  PopScreen;
+  SetCursorType(CurType);
+  Return Ch;                                  /* Вернули номер выбранного пункта меню    */
+END;
+
+/* *** */
+CLASS TkvnGrid(px0, py0, px1, py1);
+  Private Var 
+    MinX = 1,                                 /* Меньше по Х низзя                       */
+    MinY = 1,                                 /* Меньше по Y низзя                       */
+    MaxX = ScreenSizeX()-2,                   /* Больше по Х низзя                       */
+    MaxY = ScreenSizeY()-2,                   /* Больше по Y низзя                       */
+    ev     : TkvnEvent = TkvnEvent,           /* Элемент класса обработчика событий      */
+    _IsActive   = True;
+
+  Var
+    vColorSelStr   = YELLOW, 
+    vBColorSelStr  = GREEN, 
+    vColorStr      = BLACK, 
+    vBColorStr     = LIGHTGRAY, 
+    vColorFrame    = BLACK, 
+    vColorTitle    = DARKGRAY, 
+    vColorHead     = BLACK;
+
+  Var 
+    ff, 
+    aFldNm = TArray,                          /* Массив имен полей                       */
+    aFldSz = TArray,                          /* Массив размеров полей                   */
+    aFldCp = TArray,                          /* Массив подписей полей                   */
+    aProc  = TArray,                          /* Массив процедур вычисления значений     */
+    aOff   = TArray,                          /* Массив смещений контролов грида         */
+    aLen   = TArray,                          /* Массив длин контролов грида             */
+
+    Left   = px0, 
+    Top    = py0, 
+    Right  = px1, 
+    Bottom = py1, 
+    CurType, 
+    NextOk, 
+    Ch     = 0, 
+    CountStr, 
+    TotalCol, 
+    CurX, 
+    CurY, 
+    OldCurX    = -1, 
+    OldCurY    = -1, 
+    BegCol     = 0, 
+    EndCol     = 0, 
+    DivSymbol  = "│", 
+    SeekProc   = Null, 
+    ReWindProc = Null, 
+    LocateProc   = Null, 
+    NameUserProc = Null, 
+    fReWindProcExist = False, 
+    fLocateProcExist = False,
+    fUserProcExist   = False, 
+    cLeft      = -1, 
+    cRight, 
+    cTop, 
+    InForm     = False,                       /* Признак особой обраб.: выход по Tab и др*/
+    NoFrame    = False,                       /* Рисовать без рамки                      */
+    MaxElem    = 0, 
+    Title           : String      = "",       /* Заголовок формы                         */
+    StatusLine      : String      = "~ESC~ - отмена ~Enter~ - выбрать ~F4~ - поиск";  
+                                              /* Строка статуса                          */
+  MACRO SetDefaultPalette;
+    vColorSelStr   = YELLOW;
+    vBColorSelStr  = GREEN; 
+    vColorStr      = BLACK; 
+    vBColorStr     = LIGHTGRAY;
+    vColorFrame    = BLACK; 
+    vColorTitle    = DARKGRAY;
+    vColorHead     = BLACK;
+    DivSymbol      = "│"; 
+  END;
+
+  MACRO SetSystemPalette;
+    vColorSelStr   = YELLOW;
+    vBColorSelStr  = BLUE; 
+    vColorStr      = YELLOW; 
+    vBColorStr     = CYAN;
+    vColorFrame    = BLACK;
+    vColorTitle    = BLACK;
+    vColorHead     = BLACK; 
+    DivSymbol      = " "; 
+  END;
+
+  MACRO SetGridPalette;
+    vColorSelStr   = BLACK;
+    vBColorSelStr  = CYAN; 
+    vColorStr      = WHITE; 
+    vBColorStr     = BLUE;
+    vColorFrame    = WHITE;
+    vColorTitle    = WHITE;
+    vColorHead     = LIGHTGRAY; 
+    DivSymbol      = " "; 
+  END;
+
+  MACRO SetMyGridPalette;
+    vColorSelStr   = BLACK;
+    vBColorSelStr  = LIGHTGRAY; 
+    vColorStr      = LIGHTCYAN; 
+    vBColorStr     = BLUE;
+    vColorFrame    = WHITE;
+    vColorTitle    = WHITE;
+    vColorHead     = LIGHTGRAY; 
+    DivSymbol      = "│"; 
+  END;
+
+  Private MACRO SetCursor(x, y);
+    OldCurX = CurX;
+    OldCurY = CurY;
+    CurX    = x;
+    CurY    = y;
+  END;
+
+  MACRO CountTotalCol                 /* TkvnGrid: Считаем колонки               */
+    Private Var 
+      i = BegCol,                             /* Начиная с первого относительного поля   */
+      pos;
+
+    TotalCol  = 0;                            /* Общая ширина пока 0                     */
+    aOff.Size = 1;
+    aOff[0]   = 0;                            /* Первое поле не смещено                  */
+    EndCol    = BegCol;
+
+    While (i<aFldNm.Size)                     /* Пока не кончились поля                  */
+      If (aFldSz[i]==Null) aFldSz[i] = 6; End;/* Нужна длина поля по умолчанию (6)       */
+      pos = TotalCol + aFldSz[i] + 1;
+      If (pos < Right-Left)                   /* Пока влезает на экран                   */
+        aLen[i-BegCol] = aFldSz[i];           /* Запомнили ширину отрисовки поля         */
+        EndCol         = EndCol + 1;          /* Количиство колонок на экране            */
+        TotalCol       = pos;                 /* Увеличиваем ширину                      */
+        aOff[i-BegCol+1] = TotalCol;          /* Смещение колонки на экране              */
+      Else
+        pos            = Right - Left - 1;    /* Новая ширина                            */
+        aLen[i-BegCol] = pos - TotalCol;      /* Запомнили ширину отрисовки части поля   */
+        EndCol   = EndCol   + 1;              /* Количиство колонок на экране            */
+        TotalCol = pos;                       /* Увеличиваем ширину                      */
+        aOff[i-BegCol+1] = TotalCol;          /* Ширина колонки на экране                */
+        Return TotalCol;                      /* Сколько насчитали                       */
+      End;
+      i = i + 1;                              /* Перешли к следующему полю               */
+    End;
+    Return TotalCol;                          
+  END;
+
+  MACRO GetNumberCurrentField()
+    Return CurX+BegCol;
+  END; 
+
+  MACRO SetSize(px0, py0, px1, py1);
+    Left   = px0;
+    Top    = py0;                           /* Тир строки на отбивку и подписи полей   */
+    Right  = px1; 
+    Bottom = py1; 
+    If (NoFrame)
+      Left   = Left   - 1;
+      Top    = Top    - 1;
+    End;  
+    CountTotalCol;
+  END;
+
+  MACRO NewSize(cLeft, cTop, cRight, cBottom);
+    SetSize(cLeft, cTop + 4, cRight, Bottom);
+  END;
+
+  MACRO GetFld(cOff)                          /* TkvnGrid: Считываем значение поля       */
+    If ((ValType(aProc[cOff])==20) Or (aProc[cOff]!=Null)) /* Есть процедура подстановки */
+      Return ExecMacro2(aProc[cOff], ff.(aFldNm[cOff]));   /* Запускаем ее               */
+    End;
+    Return ff.(aFldNm[cOff]);                 /* Возвращаем прямое значение поля         */
+  END;
+
+  MACRO PrintStr(i);                          /* TkvnGrid: выводим на экран i-строку     */
+    Private Var 
+      ret = "",                               /* Сюда будем собирать итогувую строку     */
+      j   = BegCol,                           /* С условно первой строки                 */
+      ss;                                     /* Здесь будем хранить знач. текущего поля */
+
+    While (j<EndCol)                          /* До условно последней строки             */
+      ss  = Trim(String(GetFld(j)));          /* Считать значение текущего поля          */
+      If (StrLen(ss)<=aLen[j-BegCol])         /* Поле влезает целиком                    */
+        ss = kvnStrToLen(ss, aLen[j-BegCol], " ", False); /* Запихнем его целиком        */
+      Else                                    /* Поле не влезает целиком                 */
+        ss = kvnStrToLen(ss, aLen[j-BegCol]-1, " ", False) + ""; /* Режем и вставим "" */
+      End;
+      ret = ret + ss + DivSymbol;             /* Добавить к результату                   */
+      j   = j + 1;                            /* Следующее поле                          */
+    End;
+    FillRect(left+1, top+i+1, right-1, top+i+1, vColorStr, vBColorStr, 32); /* Подложка  */
+    DrawStr( left+1, top+i+1, ret, vColorStr, vBColorStr, TotalCol); /* Выводим строку   */
+  END;
+
+/*
+  MACRO PrintStrColor(i); /* Тот же макрос, но с прорисовкой линий */
+    Private Var 
+      ret = left+1, 
+      j   = BegCol, 
+      ss;
+    While (j<EndCol) /*aFldNm.Size) */
+      ss = GetFld(j)+" ";
+      DrawStr( ret, top+i+1, ss, vColorStr, vBColorStr, AFldSz[j]); /* Рисуем текущую строку       */
+      ret = ret + AFldSz[j]+1;
+      DrawStr( ret-1,top+i+1,DivSymbol, vColorFrame, vBColorStr, 1);      /* Рисуем разделитель          */
+      j = j + 1;
+    End;
+  END; 
+*/
+
+  MACRO VerifyNext                            /* TkvnGrid: проверим след. строку         */
+    Private Var NextOk = ff.Next;             /* Доступна ли она физически               */
+    If (Not NextOk) ff.Prev; Return False; End;        /* Не доступна. До свидания.               */
+    If (fLocateProcExist) 
+      NextOk = ExecMacro2(LocateProc); 
+      If (Not NextOk) ff.Prev; End; 
+    End;
+
+    Return NextOk;                            /* Есть процедура программной проверки     */
+  END;                                        /* Возвращаем итоговое значение            */
+
+  MACRO VerifyPrev                            /* TkvnGrid: проверим предыдущую строку    */
+    Private Var PrevOk = ff.Prev;             /* Доступна ли она физически               */
+    If (Not PrevOk) ff.Next; Return False; End;        /* Не доступна. До свидания.               */
+    If (fLocateProcExist) 
+      PrevOk = ExecMacro2(LocateProc); 
+      If (Not PrevOk) ff.Next; End; 
+    End;
+    Return PrevOk;                            /* Есть процедура программной проверки     */
+  END;                                        /* Возвращаем итоговое значение            */
+
+  MACRO ClearCur;
+    If (cLeft!=-1)                            /* Нужно стирать на старом месте           */
+      RectColorChange(cLeft, cTop, cRight, cTop, vColorStr, vBColorStr);
+    End;
+  END;
+
+  MACRO PrintCur;                             /* TkvnGrid: Выделение текущей строки      */
+    Var pos;
+    If (CurX >= EndCol-BegCol-1) 
+      pos = Left+aOff[CurX]+aFldSz[EndCol-1]; 
+      If (pos>Right-2) pos = Right-1; End;
+    Else
+      pos = Left+aOff[CurX+1]-1;
+    End;
+
+    ClearCur;
+    cLeft  = Left+1+aOff[CurX];
+    cTop   = Top+1+CurY;
+    cRight = pos;
+    RectColorChange(cLeft, cTop, cRight, cTop, vColorSelStr, vBColorSelStr);
+
+  END;
+
+  MACRO SelectString
+    If (Top  == Null) Return; End;
+    If (CurY == Null) Return; End; 
+    ClearCur;
+    RectColorChange(Left+1, Top+1+CurY, Right-1, Top+1+CurY, vBColorStr, vColorStr);
+  END;
+
+  MACRO IsActive(vFlagSet)
+    If (vFlagSet==Null) Return _IsActive; End;
+    _IsActive = vFlagSet;
+  END;
+
+  MACRO PrintArray                            /* TkvnGrid: Печать всей таблицы           */
+    Private Var 
+      Pos   = ff.GetPos,                      /* Заучили текущую позицию                 */
+      NextOk = True, 
+      i; 
+
+    i = CurY; While (i>0) ff.Prev; i = i - 1; End; /* От текущей позиции к первой        */
+
+    FillRect(left+1, top+1, right-1, bottom-1, vColorStr, vBColorStr, 32); /* Подложка   */
+    While ((i<CountStr) And (NextOk))         /* Будем считать элементы                  */
+      PrintStr(i);                            /* Отрисовали текущую строку               */
+      NextOk = VerifyNext;                    /* Есть ли следующая стр                   */
+      i = i + 1;
+    End;
+    MaxElem = i-1;                            /* Подсчитали строки                       */
+    ff.GetDirect(Pos);                        /* Вернулись на текущую строку             */
+    If (IsActive) PrintCur; End;              /* Выделили ее                             */
+  END;
+
+  MACRO SeekValue(s);                         /* TkvnGrid: Ищем заданное значение        */
+    Private Var 
+      Pos = ff.GetPos,                        /* Запомнили текущую позицию               */
+      i   = 0, 
+      NextOk = True;
+
+    If (s==Null) 
+      s = String(GetFld(CurX));                 /* Запомнили значение в текущем поле       */
+      If (Not GetString(s, "Введите значение")) /* Если значение не ввели и не подтвердили */
+        ff.GetDirect(Pos); Return False;        /* Отпозиционировались на место            */
+      End;
+    End;
+
+    If ((ValType(SeekProc)==20) Or (SeekProc!=Null)) /* Имеется пользуновский поиск      */
+      i = ExecMacro2(SeekProc, s);            /* Запускаем пользуновскую процедуру       */
+      If (i!=-9999)                           /* Что-то пытались искать                  */
+        If (i<0) kvnMsgBox("Искомое значение не найдено"); Return False; End; /* Упс...  */
+        CurY = 0;                             /* Эта строка будет самой верхней          */
+        RemProgress;                          /* Спрятали градусник в карман             */
+        PrintArray;                           /* Отрисуем таблицу                        */
+        Return True;                          /* До свидания. Все найдено.               */
+      End;                     
+    End;
+ 
+    /* Нужен поиск общим методом                                                         */
+    i = 0; InitProgress(ff.NRecords, "Подождите, идет поиск...", "Подождите, идет поиск...");
+    While (NextOk)                            /* Пока есть следующая строка              */
+      UseProgress(i); i = i + 1;              /* Отрисовываем градусник                  */
+      If (TestEvent==27)                      /* Нажат ESC                               */
+        ff.GetDirect(Pos);                    /* Отпозиционировались на место            */
+        RemProgress;                          /* Спрятали градусник в карман             */
+        kvnMsgBox("Процедура поиска прервана пользователем"); /* Ругнулись на торопыгу   */
+        Return False;                         /* Ничего не найдено...                    */
+      End; 
+      If (Index(String(GetFld(CurX)), s)>0)   /* Найдена подстрока                       */
+        CurY = 0;                             /* Эта строка будет самой верхней          */
+        RemProgress;                          /* Спрятали градусник в карман             */
+        PrintArray;                           /* Отрисуем таблицу                        */
+        Return True;                          /* До свидания. Все найдено.               */
+      End;
+      If (Not VerifyNext) NextOk = False; End; /* Не можем перейти на следующую строку   */
+    End;    
+
+    ff.GetDirect(Pos);                        /* Отпозиционировались на место            */
+    RemProgress;                              /* Спрятали градусник в карман             */
+    kvnMsgBox("Искомое значение не найдено"); /* Пожалобились юзеру на свою тяжкую долю  */
+    Return False;                             /* Ничего не найдено                       */
+  END;
+
+  MACRO ArrayPgDn;
+    Private Var 
+      pos    = ff.GetPos, 
+      pos1   = Null, 
+      NextOk = True, 
+      i      = 0;
+
+    OldCurY = CurY;
+    While (CurY<MaxElem) CurY = CurY + 1; ff.Next; End; 
+
+    While (i<CountStr) 
+      If (Not VerifyNext) ff.GetDirect(pos); CurY = OldCurY; Return False; End;
+      If (i==OldCurY) pos1 = ff.GetPos; End;
+      i = i + 1; 
+    End; 
+
+    If (pos1 !=Null) 
+      ff.GetDirect(pos1); CurY = OldCurY;
+    Else 
+      While (CurY>OldCurY) CurY = CurY - 1; ff.Prev; End; 
+    End;
+
+    PrintArray;
+    Return True;
+  END;
+
+  MACRO ArrayPgUp;
+    Private Var 
+      pos    = ff.GetPos, 
+      pos1   = Null, 
+      PrevOk = True, 
+      i      = 0;
+    OldCurY = CurY;                           /* Запомнили позицию курсора               */
+    While (CurY>0)                            /* Движемся вверх                          */
+      CurY = CurY - 1; 
+      ff.Prev; 
+    End;
+ 
+    While (i<CountStr) 
+      If (Not VerifyPrev) ff.GetDirect(Pos); CurY = OldCurY; Return False; End;
+      If (i==CountStr-OldCurY-1) pos1 = ff.GetPos; End;
+      i = i + 1;
+    End;
+
+    If (pos1 !=Null) 
+      ff.GetDirect(pos1); CurY = OldCurY;
+    Else 
+      While (CurY<OldCurY) CurY = CurY + 1; ff.Next; End; 
+    End;
+
+    PrintArray;
+    Return True;
+  END;
+
+  MACRO PrintNames;
+    Private Var 
+      ret = "", 
+      ret1 = "", 
+      ret2 = "", 
+      j   = BegCol, 
+      kk, 
+      ss, 
+      sp;
+
+    While (j<EndCol) 
+      If (aFldCp[j]!=Null) ss = aFldCp[j]; Else ss = aFldNm[j]; End;
+      kk   = aOff[j-BegCol+1]-aOff[j-BegCol]-1;
+      ret  = ret  + kvnStrToLenCenter(ss, kk, " ");
+      If (aFldSz[j]<=kk) ret = ret + "│"; End;
+      If (ret1!="") ret1 = ret1 + "┼"; End; 
+      If (ret2!="") ret2 = ret2 + "┬"; End; 
+      sp   = kvnStrToLen("─", AFldSz[j], "─");
+      ret1 = ret1 + sp;
+      ret2 = ret2 + sp;
+
+      j = j + 1;
+    End;
+
+    ret1 = ret1 + "┤";
+    ret2 = ret2 + "┐"; 
+    FillRect(left+1, top-2, right-1, bottom-1, vColorStr, vBColorStr, 32); /* Внутренности          */
+    DrawStr( left+1, top-1, ret, vColorHead, vBColorStr, TotalCol);    /* Рисуем текущую строку     */
+    DrawStr( left+1, top-2, ret2, vColorHead, vBColorStr, TotalCol);     /* Рисуем отбивку сверху     */
+    DrawStr( left+1, top, ret1, vColorHead, vBColorStr, TotalCol);     /* Рисуем отбивку снизу      */
+
+  END;
+
+  MACRO MyRight
+    SetCursor(CurX+1, CurY);
+
+    If (CurX<aOff.Size-1) PrintCur; Return False; End;
+    CurX = OldCurX;
+
+    If (aFldNm.Size>EndCol) 
+      BegCol = BegCol + 1;
+      CurX   = CurX   - 1;
+      CountTotalCol;
+      PrintNames;
+      PrintArray;
+      Return True;
+    End;
+
+    If (Right-5-aOff[CurX]>=aFldSz[EndCol-1]) Return False; End;
+    If (BegCol+1 == EndCol)                   Return False; End;
+
+    BegCol = BegCol + 1;
+    CountTotalCol;
+    CurX    = CurX - 1;
+    PrintNames;
+    PrintArray;
+    Return True;
+
+  END;
+
+  MACRO MyLeft;
+    SetCursor(CurX-1, CurY);
+    If (CurX>=0) PrintCur; Return True; End; 
+
+    If (CurX<0) 
+      If (BegCol>0)
+        CurX = OldCurX;
+        BegCol = BegCol - 1;
+        CountTotalCol;
+        PrintNames;
+        PrintArray;
+      Else
+        CurX = OldCurX; 
+        PrintCur;
+      End;
+    End; 
+  END;
+
+  MACRO PrintFrame;
+    CountStr = bottom-top-1;
+    CountTotalCol;
+
+    If (Not NoFrame) 
+      Frame(left, top-3, right, bottom, DoubleFrame, vColorFrame, vBColorStr);   /* Рамка        */
+    End;
+    FillRect(left+1, top-2, right-1, bottom-1, vColorStr, vBColorStr, 32); /* Внутренности */
+
+    If (StatusLine!="") Message(StatusLine); End;
+    If (Title!="") 
+      If (StrLen(Title)>Right-Left-3) Title = SubStr(Title, 1, Right-Left-3); End;
+      Title = " " + Trim(Title) + " ";
+      DrawStr(left + (Right-Left-StrLen(Title))/2+1, Top-3, Title, vColorTitle, vBColorStr, StrLen(Title));
+    End;
+    PrintNames;
+    CurX = 0; CurY = 0; 
+  END;
+
+  MACRO Events(vKeyCode);
+
+    NextOk = True;
+    While (NextOk)                              /* Гоняем цикл отработки событий           */
+      If (vKeyCode==Null) 
+        ev.ClearEvent;                          /* Очистили стэк событий                   */
+        ev.GetEvent;                            /* Пытаемся получить новое событие         */
+      Else
+        ev.KeyDown = True;
+        ev.KeyCode = vKeyCode;
+        vKeyCode = Null;
+      End;
+      If (ev.KeyDown)                           /* Нажата клавиша                          */
+        If (fUserProcExist)
+          If (ExecMacro2(NameUserProc, ev.KeyCode)!=Null) 
+            NextOk   = False;
+            ev.ClearEvent;
+            Return;
+          End;
+        End;
+        If (ev.KeyCode == kbDef.kbEsc)          /* Это ESC                                 */
+          Ch     = -1;                          /* Ну тады ничего не выбрано               */
+          NextOk = False;                       /* До свиданья, дорогие!                   */
+          Return;
+        ElIf (ev.KeyCode == kbEnter)
+/*          While (CurY>0) ff.Next; CurY = CurY - 1; End;*/
+          If (Not InForm) 
+            Ch = ff.GetPos;
+            NextOk = False;
+          End;
+        ElIf (ev.KeyCode == kbTab) 
+          If (InForm) 
+            Ch = ff.GetPos; 
+            NextOk = False; 
+          Else
+            MyRight;
+          End;
+        ElIf (ev.KeyCode == kbCtrlRight)
+          If (InForm) 
+            Ch = ff.GetPos; NextOk = False; 
+          End;
+        ElIf (ev.KeyCode == kbShiftTab) 
+          If (InForm) 
+            Ch = ff.GetPos; 
+            NextOk = False; 
+          Else
+            MyLeft;
+          End;
+        ElIf (ev.KeyCode == kbCtrlLeft)
+          If (InForm) 
+            Ch = ff.GetPos; 
+            NextOk = False; 
+          End;
+        ElIf (ev.KeyCode == kbF4)
+          SeekValue;
+        ElIf (ev.KeyCode == kbRight) 
+          MyRight;
+        ElIf (ev.KeyCode == kbLeft) 
+          MyLeft;
+        ElIf (ev.KeyCode == kbDown)
+          SetCursor(CurX, CurY);
+          If (CurY<MaxElem) 
+            CurY = CurY + 1; 
+            ff.Next;
+            PrintCur; 
+          ElIf (VerifyNext) 
+            ClearCur;
+            RectVerScroll(Left+1, Top+1, Right-1, Bottom-1, 1);
+            PrintStr(CurY);
+            PrintCur;
+          End;
+        ElIf (ev.KeyCode == kbUp)
+          SetCursor(CurX, CurY);
+          If (CurY>0) 
+            CurY = CurY - 1; ff.Prev; PrintCur; 
+          ElIf (VerifyPrev)
+            ClearCur;
+            RectVerScroll(Left+1, Top+1, Right-1, Bottom-1, -1);
+            PrintStr(CurY);
+            PrintCur;
+          End;
+        ElIf (ev.KeyCode == kbPgDn)
+          ArrayPgDn;
+        ElIf (ev.KeyCode == kbPgUp)
+          ArrayPgUp;
+        ElIf (ev.KeyCode == kbHome)
+          SetCursor(CurX, 0);
+          PrintCur;
+        ElIf (ev.KeyCode == kbEnd)
+          SetCursor(CurX, CountStr-1);
+          PrintCur;
+        ElIf (ev.KeyCode == kbCtrlPgUp)
+          If (fReWindProcExist)
+            ExecMacro(ReWindProc);
+          Else
+            ff.ReWind; 
+          End;
+          ff.Next;
+          SetCursor(0, 0);
+          PrintArray;
+        ElIf (ev.KeyCode == kbCtrlPgDn)
+          If (Not fReWindProcExist)
+            ff.ReWind; 
+            VerifyPrev;
+            SetCursor(aOff.Size-2, CountStr-1);
+            PrintArray;
+          End;
+        Else
+          Message(ev.KeyCode);
+        End;
+      End;
+
+    End;
+  END;
+
+  MACRO PrintGrid(vDefault, vPos, vKeyCode);
+    Private var ii;
+
+    IsActive(True);
+
+    PushScreen( 0, ScreenSizeY-1, ScreenSizeX-1, ScreenSizeY-1 ); /* StatusLine            */
+    PushScreen(0, 0, ScreenSizeX-1, ScreenSizeY-1);       /* Запомнили экран под будущим меню        */
+
+    fReWindProcExist = False;
+    fLocateProcExist = False;
+    fUserProcExist   = False;
+    If ((ValType(ReWindProc  )==20) Or (ReWindProc   != Null)) fReWindProcExist = True; End;
+    If ((ValType(LocateProc  )==20) Or (LocateProc   != Null)) fLocateProcExist = True; End;
+    If ((ValType(NameUserProc)==20) Or (NameUserProc != Null)) fUserProcExist   = True; End;
+
+    PrintFrame;
+
+    CurType = GetCursorType;
+    SetCursorType(NoCursor);
+
+    If (fReWindProcExist)
+      If (Not ExecMacro2(ReWindProc)) 
+        kvnMsgBox("Список пуст. Окно выбора будет закрыто.");
+        NextOk = False; Ch = -1; 
+      End;
+    Else
+      ff.ReWind; 
+    End;
+    VerifyNext; 
+
+    If ((vDefault!=Null) And (vDefault!="")) SeekValue(vDefault); End; 
+    If (vPos!=Null) ff.GetDirect(vPos); End; 
+
+    PrintArray;
+    Events(vKeyCode);
+
+    PopScreen;                                  /* Вернули все на место                    */
+    PopScreen;
+    SetCursorType(CurType);
+    Return _KeyCode;                            
+
+  END;
+
+  If (Top != Null) Top = Top + 3; End;
+ 
+END;
+
+
+/* *** */
+CLASS TkvnControl                             /* Класс контрола для формы                */
+  Private Var 
+    _text     : String  = "",                 /* Значение контрола                       */
+    _name     : String  = "",                 /* Имя контрола                            */
+    _available : Bool   = False,               /* Контрол доступен для выбора             */
+    _LinkObj            = Null;
+
+  Var 
+    Type      : String  = "",                 /* Тип контрола                            */
+    Num       : Integer = -1,                 /* Индекс контрола в массиве               */
+    Left      : Integer = -1,                 /* Левая позиция курсора внутри формы      */
+    Top       : Integer = -1,                 /* Верхняя позиция курсора внутри формы    */
+    Right     : Integer = -1,                 /* Правая позиция курсора внутри формы     */
+    Bottom    : Integer = -1,                 /* Нижняя позиция курсора внутри формы     */
+    Editable  : Bool    = False,              /* Контрол доступен для редактирования     */
+    Offset    : Integer = 0,                  /* Смещение с начала текста при отрисовке  */
+    Parent              = Null,               /* Ссылка на класс родительской формы      */
+    NameUserProc        = Null,               /* Имя польз. процедуры обработки событий  */
+    SelectProc          = Null,               /* Имя пользоват. процедуры выбора по F3   */
+    ValIsNotNull: Bool  = False,              /* Поле обязательно для заполнения         */
+    ValIsLen  : Integer = Null,               /* Максимальная длина значения поля        */
+    ValIsType : Integer = Null,               /* Тип значения                            */
+    ValIsMask : String  = Null,               /* Маска значения                          */
+    
+    EditColor     : Integer,                  /* Цвет активного поля (Edit Mode On)      */
+    EditFColor    : Integer,                  /* Цвет фона активного поля (Edit Mode On) */
+    NoEditColor   : Integer,                  /* Цвет активного поля (Edit Mode Off)     */
+    NoEditFColor  : Integer,                  /* Цвет фона активного поля (Edit Mode Off)*/
+    NoFocusColor  : Integer,                  /* Цвет неактивного поля                   */
+    NoFocusFColor : Integer,                  /* Цвет фона неактивного поля              */
+    DisableColor  : Integer,                  /* Цвет заблокированного поля              */
+    DisableFColor : Integer;                  /* Цвет фона заблокированного поля         */
+
+  MACRO LinkObj(ObjForLink);
+    If (ObjForLink==Null) Return _LinkObj; End;
+    _LinkObj = ObjForLink;
+    If (Type=="G") 
+      _LinkObj.InForm   = True;
+      _LinkObj.NoFrame  = True;
+      _LinkObj.IsActive(False);
+      _LinkObj.NewSize(Left, Top, Right, Bottom);
+      _LinkObj.SetGridPalette;
+      If (this==Parent.ActiveControl) _LinkObj.IsActive(True); End;
+    End;
+    Return _LinkObj;
+  END;
+
+  MACRO GetPrintedText(PosY);                 /* TkvnControl: Печатаемый текст-в массив  */
+    Var 
+      lnFld  = Right - Left + 1,              /* Ширина контрола                         */
+      s      = _text,                         /* Текст контрола с учентом смещения       */
+      Ch     = "",                            /* Текущий символ строки                   */
+      CurStr = "",                            /* Текущая печатаемая строка               */
+      i      = 0;
+
+    If ( Parent==Null ) Return False; End;
+    If ((Type != "C") And (Type != "E") And (Type != "B")) Return False; End; 
+
+    If ( PosY != Null ) 
+      PosY = PosY + Offset;
+      Return kvnSplit(_text, Parent.aPrTxt, lnFld, PosY);
+    End;
+    Parent.TotalCol = kvnSplit(_text, Parent.aPrTxt, lnFld);
+    Parent.aPrTxt.Size = Parent.TotalCol; 
+  END;
+
+  MACRO GetColor(Color, FColor);
+    If (Type == "C")                          /* Это надпись                             */
+      SetParm(1, NoFocusColor);
+      SetParm(2, NoFocusFColor);
+      Return True; /* Выбрали соответст. цветовую палитру */
+    End;
+
+    If (Type == "E")                          /* Это текстовое поле                      */
+      If (Num == Parent.ActiveControl.Num)    /* Текущая строка является активной        */
+        If (Parent.EditMode)                  /* Режим редактирования включен            */
+          SetParm(1, EditColor); SetParm(2, EditFColor); Return True;
+        End;                                  /* Режим редактирования выключен           */
+        SetParm(1, NoEditColor); SetParm(2, NoEditFColor); Return True;
+      End;                                    /* Это неактивная строка                   */
+      If (Not _available)                     /* Это заблокированная строка              */
+        SetParm(1, DisableColor); SetParm(2, DisableFColor); Return True;
+      End;                                    /* Это самая обычная строка                */
+      SetParm(1, NoFocusColor); SetParm(2, NoFocusFColor); Return True;
+    End;
+    If (Type == "B")
+      If (Num == Parent.ActiveControl.Num)    /* Это активная кнопка                     */
+        SetParm(1, WHITE); SetParm(2, RED); Return True; 
+      End;                                    /* Это неактивная кнопка                   */
+      If (Not _available)                     /* Это заблокированная кнопка              */
+        SetParm(1, DARKGRAY); SetParm(2, GREEN); Return True;
+      End;                                    /* Это самая обычная кнопка                */
+      SetParm(1, BLACK); SetParm(2, GREEN); Return True;
+    End;
+    If (Type == "F")                          /* Это флажок                              */
+      If (Num == Parent.ActiveControl.Num)    /* Текущий флажок является активным        */
+        SetParm(1, WHITE); SetParm(2, GREEN); Return True; 
+      End;                                    /* Текущий флажок НЕ является активным     */
+      SetParm(1, WHITE); SetParm(2, BLUE); Return True; 
+    End;
+
+    Return False;
+  END;
+
+  MACRO CursorType
+    If (Type == "B")                          /* Это кнопяра                             */
+      SetCursorType(NoCursor);                /* Скрыли курсор                           */
+    Else                                      /* Это не кнопяра                          */
+      If (Not Parent.EditMode)
+        SetCursorType(NoCursor);              /* Скрыли курсор                           */       
+      Else
+        SetCursorType(NormCursor);            /* Установили нормальный курсор            */
+/*        SetCursorPos(Parent.Left+Left, Parent.Top+Top); /* Перетащили курсор в активное поле */*/
+      End;
+    End;
+  END;
+
+  MACRO PrintControl;                         /* TkvnControl: Печать контрола            */
+    Var 
+      i      = 0, 
+      CurStr, 
+      lnFld  = Right - Left + 1,              /* Ширина контрола                         */ 
+      Color,                                  /* Цвет текста                             */
+      FColor;                                 /* Цвет поля под текстом                   */
+
+    GetPrintedText;
+    If ((Type == "C") Or (Type == "E"))       /* Это текстовое поле                      */
+      GetColor(Color, FColor);
+      While (Top+i<=Bottom) 
+        If (offset+i<Parent.TotalCol)
+          CurStr = Parent.aPrTxt[offset+i]; 
+        Else
+          CurStr = "";
+        End;
+
+        While (StrLen(CurStr)<lnFld) CurStr = CurStr + " "; End;
+        DrawStr(Parent.Left+Left, Parent.Top+Top+i, CurStr, Color, FColor, lnFld);
+        i = i + 1;
+      End;
+    ElIf (Type == "B")                        /* Это кнопка                              */
+      GetColor(Color, FColor);
+      CurStr = Parent.aPrTxt[0]; While (StrLen(CurStr)<lnFld) CurStr = CurStr + " "; End;
+      DrawStr(Parent.Left+Left, Parent.Top+Top+i, CurStr, Color, FColor, lnFld);
+      If (Top != Bottom)                      /* Прогнемся и намалюем тень               */
+        CurStr = "▄"; While (StrLen(CurStr)<lnFld) CurStr = CurStr + "▄"; End;
+        DrawStr(Parent.Left+1+Left, Parent.Top+Top+1, CurStr, BLUE, BLACK, lnFld); 
+      End;
+      DrawStr(Parent.Left+1+Right, Parent.Top+Top,   "▀",    BLUE, BLACK, 1); 
+    ElIf (Type == "F")
+      If ((this.Text == Null) Or (this.Text == ""))
+        CurStr = "[ ]";
+      Else
+        CurStr = "[√]";
+      End; 
+      GetColor(Color, FColor);
+      DrawStr(Parent.Left+Left, Parent.Top+Top, CurStr, Color, FColor, 3);
+    ElIf (Type == "G")                        /* Это грид.                               */
+      If (LinkObj!=Null) 
+        LinkObj.PrintFrame;
+        LinkObj.PrintArray;
+      End; 
+    End;
+    CursorType;
+  END;
+
+  MACRO PrintUp;
+    Var 
+      s, 
+      Color  = WHITE, 
+      FColor = LIGHTBLUE, 
+      lnFld  = Right - Left + 1;              /* Ширина контрола                         */ 
+
+    If (Offset+Bottom-Top+1>=Parent.TotalCol) Return False; End;
+    s = Parent.aPrTxt[Offset+Bottom-Top+1];
+    RectVerScroll(Left, Top+1, Right, Bottom+1, 1);
+    While (StrLen(s)<lnFld) s = s + " "; End;
+    DrawStr(Parent.Left+Left, Parent.Top+Bottom, s, Color, FColor, lnFld);
+    Offset = Offset + 1;
+    Return True;
+  END;
+
+  MACRO PrintDown;
+    Var 
+      s, 
+      Color  = WHITE, 
+      FColor = LIGHTBLUE, 
+      lnFld  = Right - Left + 1;              /* Ширина контрола                         */ 
+
+    If (Offset<=0) Return False; End;
+    s = Parent.aPrTxt[Offset-1];
+    RectVerScroll(Left, Top+1, Right, Bottom+1, -1);
+    While (StrLen(s)<lnFld) s = s + " "; End;
+    DrawStr(Parent.Left+Left, Parent.Top+Top, s, Color, FColor, lnFld);
+    Offset = Offset - 1;
+    Return True;
+  END;
+
+  MACRO Text(Val, cPrint);                     /* TkvnControl: Обработка знач-ия поля     */
+    Var Ret = Null;
+    If (_text!=Null)                          /* Запомним возвращаемое значение          */
+      If (SubStr(_text, StrLen(_text))=="\n") 
+        Ret = SubStr(_text, 1, StrLen(_text)-1);/* Вырезаем лишний \n на конце строки    */ 
+      Else
+        Ret = _text;
+      End;
+    End; 
+    If (Val!=Null)                            /* Нужно установить новое значение         */
+      _text = Val;                            /* Обновили текст                          */
+      If ((Parent.Available) And (cPrint!=False))                                          
+        PrintControl;                         /* Перерисовали                            */
+      End;
+    End;
+    Return Ret;                               /* Вернули старое значение                 */
+  END;
+
+  MACRO Name(Val);                            /* TkvnControl: Обработка имени контрола   */
+    Var Ret = _name;                          /* Запомним возвращаемое значение          */
+    If (Val!=Null) _name = Val; End;          /* Обновили имя контрола                   */
+    Return Ret;                               /* Вернули старое имя контрола             */
+  END;
+
+  MACRO Available(Val);                       /* TkvnControl: Обработка доступности поля */
+    Var Ret = _available;                     /* Запомним возвращаемое значение          */
+    If (Val!=Null) 
+      If (_available != Val) 
+        _available = Val;                     /* Обновили свойство доступности контрола  */
+        Parent.BuildListAvailableControls;    /* Обновили массив доступных контролов     */
+        If (Parent.Available) PrintControl; End;
+      End;
+    End;                                      
+    Return Ret;                               /* Вернули старое имя контрола             */
+  END;
+
+  MACRO VerifyValids
+    Var s, m;
+
+    If (ValIsNotNull)                         /* Задано ограничение поля на Not Null     */
+      If ((_text==Null) Or (Trim(_text)==""))
+        kvnMsgBox("Поле "+_name+" обязательно для заполнения");
+        Return False;
+      End;
+    End;
+    If (ValIsLen!=Null)/* Задано ограничение на макс. длину поля  */
+      If (StrLen(this.Text) > ValIsLen)    
+        kvnMsgBox("Длина поля "+_name+" превышает максимально допустимую длину!");
+        Return False;
+      End;
+    End;
+    If (ValIsType==V_INTEGER)/* Задано ограничение на тип знач-ия */
+      If (not Parent.IsNumber(Trim(this.Text)))
+        kvnMsgBox("Поле "+_name+" должно быть целочисленным!");
+        Return False;
+      End;
+    End;
+    If ((ValIsType==V_MONEY) Or (ValIsType==V_MONEYL)) /* Задано ограничение на тип знач-ия */
+      s = Trim(this.Text);
+      If ((s!= Null) And (s!=""))
+        m = String(Money(s));
+        If ((m!=s) And (m!=s+".0") And (m!=s+".00") And (m!=s+",0") And (m!=s+",00")) 
+          kvnMsgBox("Поле "+_name+" должно быть денежным!");
+          Return False;
+        End;
+        this.Text(Money(s));
+      End;
+    End;
+    If (ValIsType==V_DATE)                    /* Задано ограничение на тип знач-ия       */
+      s = Trim(this.Text);
+      If ((s==Null) Or (s=="")) Return Null; End;
+      If (Parent.IsNumber(s)) 
+        m = SubStr(s, 1, 2) + "." + SubStr(s, 3, 2) + "." + SubStr(s, 5);
+        s = m;
+      End;
+      If (not Parent.IsDate(s))
+        kvnMsgBox("Поле "+_name+" должно быть датой!");
+        Return False;
+      End;
+      Text(Parent.StrToDate(s));
+    End;
+    Return Null;
+  END;
+
+  MACRO SetActive;                            /* TkvnControl: Сделать контрол активным   */
+    Var ctr = Null, 
+        val = Null;
+
+    If ((Type=="G") And (LinkObj != Null))
+      LinkObj.IsActive(True);
+    End;
+
+    If (Not _Available) Return False; End;    /* На данном объекте сфокусироваться нельзя*/
+
+    If (Parent.ActiveControl.Num == Num)      /* Ба! Да это мы же и есть                 */
+      Return False;
+    End;
+
+    If (Parent.ActiveControl.Num!=-1)         /* Юзер пытается слинять из поля           */
+      If ((ValType(Parent.NameBeforeChCtrProc)==20) Or  
+          (Parent.NameBeforeChCtrProc!=Null)) /* Есть польз. процедура смены полей и мы  */
+        val = ExecMacro2(Parent.NameBeforeChCtrProc, this);  /* ее запускаем             */
+        If (val!=Null) Return val; End;       /* Она вернула значение. На выход с вещами.*/
+      End;
+      val = Parent.ActiveControl.VerifyValids;/* Проверяем возможность покинуть контрол  */
+      If (val!=Null) Return val; End;         /* Контрол непокидаем. На выход с вещами.  */
+    End;
+
+    If ((Parent.ActiveControl.Type=="G") And (Parent.ActiveControl.LinkObj != Null))
+      Parent.ActiveControl.LinkObj.IsActive(False);
+    End;
+
+    Parent.OldText = _text;
+
+    If (Parent.ActiveControl.Num >=0)
+      ctr = Parent.ActiveControl;             /* Ранее активный контрол. Запомним.       */
+      ctr.Offset = 0;
+    End;
+    Parent.ActiveControl = this;              /* Новый активный контрол                  */
+
+    If ( ctr!=Null ) 
+      ctr.PrintControl;                       /* Перерисовали бывший активным контрол    */
+      If ((ctr.Type=="G") And (ctr.LinkObj != Null))
+        ctr.LinkObj.SelectString;
+      End;
+    End;
+
+    Parent.EditMode = False;                /* Сбросили режим редактирования           */
+
+    PrintControl;                             /* Перерисовали новый активный контрол     */
+    Parent.ev.ClearEvent; 
+
+  END; 
+
+  MACRO PointInControl(dx, dy)                /* TkvnControl: Попадает ли точка в поле   */
+    If ((dx >= Parent.Left + Left  ) And      /* Выверяем левое поле                     */
+        (dx <= Parent.Left + Right ) And      /* Выверяем правое поле                    */
+        (dy >= Parent.Top  + Top   ) And      /* Выверяем верхнее поле                   */
+        (dy <= Parent.Top  + Bottom))         /* Выверяем нижнее поле                    */
+      Return True;                            /* Попали точкой в контрол!                */
+    End;
+    Return False;                             /* Е2! Мимо! %)                            */
+  END;
+
+  MACRO GetPosXInControl                      /* TkvnControl: Относит-ная позиция курсора*/
+    Return CursorX - Parent.Left - Left; 
+  END;
+
+  MACRO GetPosYInControl                      /* TkvnControl: Относит-ная позиция курсора*/
+    Return CursorY - Parent.Top - Top; 
+  END;
+
+  MACRO arrToText
+    Var i     = 0, 
+        lnFld = Right-Left+1;
+
+    _text = "";
+    While (i<Parent.TotalCol)
+      If (Parent.aPrTxt[i] != "ЄєЇ")          /* Подан спец. знак пропустить строку      */
+        _text = _text + Parent.aPrTxt[i];
+        If (StrLen(Parent.aPrTxt[i])<lnFld) _text = _text + "\n"; End;
+      End;
+      i = i + 1;
+    End;
+  END;
+
+  MACRO AddSymbolToString(Symb);
+    Var
+      x  = GetPosXInControl, 
+      y  = GetPosYInControl + Offset, 
+      i;
+
+    Parent.EditMode = True;
+
+    If (Symb == kbDel)
+      If (y>=Parent.TotalCol)          Return False; End;
+      If (StrLen(Parent.aPrTxt[y])==0) 
+        Parent.aPrTxt[y] = "ЄєЇ";             /* Подаем спец. знак пропустить строку     */
+        arrToText;
+        PrintControl;
+        Return True;
+      End;
+      If (StrLen(Parent.aPrTxt[y])<=x) 
+        If (y+1>=Parent.TotalCol) Return False; End;
+        SetCursorPos(Parent.Left+Left+StrLen(Parent.aPrTxt[y]), CursorY);
+        Parent.aPrTxt[y] = Parent.aPrTxt[y] + Parent.aPrTxt[y+1];
+        Parent.aPrTxt[y+1] = "ЄєЇ";           /* Подаем спец. знак пропустить строку     */
+        arrToText;
+        PrintControl;
+        Return True;
+      End;
+      Parent.aPrTxt[y] = SubStr(Parent.aPrTxt[y], 1, x) + SubStr(Parent.aPrTxt[y], x+2);
+      arrToText;
+      PrintControl;
+      Return True;
+    End;
+
+    While (Parent.TotalCol<=y)                /* Следует добавлять строки                */
+        Parent.aPrTxt[Parent.TotalCol] = "";
+        Parent.TotalCol = Parent.TotalCol + 1;
+    End;
+
+    While (StrLen(Parent.aPrTxt[y])<x) Parent.aPrTxt[y] = Parent.aPrTxt[y] + " "; End;
+    If (StrLen(Parent.aPrTxt[y])==x) 
+      Parent.aPrTxt[y] = Parent.aPrTxt[y] + StrFor(Symb); 
+    Else
+      Parent.aPrTxt[y] = SubStr(Parent.aPrTxt[y], 1, x) + StrFor(Symb) + SubStr(Parent.aPrTxt[y], x+1);
+    End;
+    arrToText;
+    PrintControl;
+  END;
+
+  MACRO SetColor(pNoFocusColor, pNoFocusFColor, pEditColor, pEditFColor, 
+                 pNoEditColor,  pNoEditFColor,  pDisableColor, pDisableFColor)
+
+    If (pNoFocusColor  != Null) NoFocusColor  = pNoFocusColor;  End;
+    If (pNoFocusFColor != Null) NoFocusFColor = pNoFocusFColor; End;
+    If (pEditColor     != Null) EditColor     = pEditColor;     End;
+    If (pEditFColor    != Null) EditFColor    = pEditFColor;    End;
+    If (pNoEditColor   != Null) NoEditColor   = pNoEditColor;   End;
+    If (pNoEditFColor  != Null) NoEditFColor  = pNoEditFColor;  End;
+    If (pDisableColor  != Null) DisableColor  = pDisableColor;  End;
+    If (pDisableFColor != Null) DisableFColor = pDisableFColor; End;
+
+    If (Parent.Available) PrintControl; End;
+  END;
+END;
+
+/* *** */
+CLASS TkvnForm;                               /* Класс формы                             */
+
+  Var 
+    strForm,                                  /* Форма в текстовом виде                  */
+    aStr   : TArray    = TArray(50),          /* Массив строк подложки формы             */
+    aCtrl  : TArray    = TArray(200),         /* Массив контролов                        */
+    aIdx   : TArray    = TArray(200),         /* Массив индексов контролов               */
+    aAvCtr : TArray    = TArray(100),         /* Массив доступный для фокуса контролов   */
+    aPrTxt : TArray    = TArray(15),          /* Массив печатаемых строк текущего поля   */
+    TotalCol: Integer  = 0,                   /* Всего строк текста в текущем поле       */ 
+    Left   : Integer   = 0,                   /* Левое поле формы                        */
+    Top    : Integer   = 0,                   /* Верхнее поле формы                      */
+    Right  : Integer   = 0,                   /* Правое поле формы                       */
+    Bottom : Integer   = 0,                   /* Нижнее поле формы                       */
+    ev     : TkvnEvent = TkvnEvent,           /* Элемент класса обработчика событий      */
+    NameInitProc       = Null,                /* Имя польз. процедуры инициализации      */
+    NameDestrProc      = Null,                /* Имя польз. процедуры деактивации        */
+    NameUserProc       = Null,                /* Имя польз. процедуры обработки событий  */
+    NameBeforeChCtrProc = Null,               /* Имя польз. процедуры проверки возмож-   */
+                                              /* допустимости активации-деактив. поля    */
+    ActiveControl   : TkvnControl = Null,     /* Активный контрол                        */
+    Available       : Bool        = False,    /* Форма доступна для отрисовки и действий */
+    EditMode        : Bool        = True,     /* Режим редактирования                    */
+    EnableFormClose : Bool        = True,     /* Форму можно свободно закрыть            */
+    OldText         : String      = "",       /* Старое значение активного контрола      */
+    Title           : String      = "",       /* Заголовок формы                         */
+    StatusLine      : String      = "",       /* Строка статуса                          */
+    Color           : Integer     = WHITE,    /* Цвет символов формы                     */
+    FColor          : Integer     = BLUE,     /* Цвет фона формы                         */
+    NoActColor      : Integer     = LIGHTGRAY, 
+
+    ExitForKeyF2    : Bool        = True, 
+    ExitForKeyF9    : Bool        = False; 
+
+
+  /* *********************************************************************************** */
+  /* Цвета по умолчанию                                                                  */
+  Var DefC_NoFocusColor  = WHITE, 
+      DefC_NoFocusFColor = BLUE, 
+
+      DefE_EditColor     = WHITE,             /* Цвет активного поля (Edit Mode On)      */
+      DefE_EditFColor    = LIGHTBLUE,         /* Цвет фона активного поля (Edit Mode On) */
+      DefE_NoEditColor   = WHITE,             /* Цвет активного поля (Edit Mode Off)     */
+      DefE_NoEditFColor  = DARKGRAY,          /* Цвет фона активного поля (Edit Mode Off)*/
+      DefE_NoFocusColor  = WHITE,             /* Цвет неактивного поля                   */
+      DefE_NoFocusFColor = BLUE,              /* Цвет фона неактивного поля              */
+      DefE_DisableColor  = DARKGRAY,          /* Цвет заблокированного поля              */
+      DefE_DisableFColor = BLUE;              /* Цвет фона заблокированного поля         */
+
+  /* *********************************************************************************** */
+  /* Обработка параметров                                                                */
+  Var ParIdx, ParCount;
+
+  /* *********************************************************************************** */
+  /* Блок вспомогательных макросов                                                       */
+  /* *********************************************************************************** */
+
+  MACRO SetDefaultPalette;
+    DefC_NoFocusColor  = WHITE;
+    DefC_NoFocusFColor = BLUE;
+
+    DefE_EditColor     = WHITE;             /* Цвет активного поля (Edit Mode On)      */
+    DefE_EditFColor    = LIGHTBLUE;         /* Цвет фона активного поля (Edit Mode On) */
+    DefE_NoEditColor   = WHITE;             /* Цвет активного поля (Edit Mode Off)     */
+    DefE_NoEditFColor  = DARKGRAY;          /* Цвет фона активного поля (Edit Mode Off)*/
+    DefE_NoFocusColor  = WHITE;             /* Цвет неактивного поля                   */
+    DefE_NoFocusFColor = BLUE;              /* Цвет фона неактивного поля              */
+    DefE_DisableColor  = DARKGRAY;          /* Цвет заблокированного поля              */
+    DefE_DisableFColor = BLUE;              /* Цвет фона заблокированного поля         */
+
+    Color              = WHITE;             /* Цвет символов формы                     */
+    FColor             = BLUE;              /* Цвет фона формы                         */
+    NoActColor         = LIGHTGRAY;
+
+  END;
+
+  MACRO SetMenuPalette;
+    DefC_NoFocusColor  = RED;
+    DefC_NoFocusFColor = LIGHTGRAY;
+
+    DefE_EditColor     = WHITE;             /* Цвет активного поля (Edit Mode On)      */
+    DefE_EditFColor    = GREEN;              /* Цвет фона активного поля (Edit Mode On) */
+    DefE_NoEditColor   = RED;               /* Цвет активного поля (Edit Mode Off)     */
+    DefE_NoEditFColor  = DARKGRAY;          /* Цвет фона активного поля (Edit Mode Off)*/
+    DefE_NoFocusColor  = RED;               /* Цвет неактивного поля                   */
+    DefE_NoFocusFColor = LIGHTGRAY;         /* Цвет фона неактивного поля              */
+    DefE_DisableColor  = DARKGRAY;          /* Цвет заблокированного поля              */
+    DefE_DisableFColor = BLUE;              /* Цвет фона заблокированного поля         */
+
+    Color              = BLACK;             /* Цвет символов формы                     */
+    FColor             = LIGHTGRAY;         /* Цвет фона формы                         */
+    NoActColor         = BLACK;
+
+  END;
+
+  MACRO Iif(cond:Bool, IfTrue, IfFalse);
+    If (cond) Return IfTrue; End;
+    Return IfFalse;
+  END;
+
+  MACRO BuildListAvailableControls;
+    Var i = 0;
+    aAvCtr.Size = 0;
+    While (i<aCtrl.Size) 
+      If (aCtrl[i].Available)                 /* Вид контрола - фокусируемый             */
+        aAvCtr[aAvCtr.Size] = aCtrl[i].Num;   /* Добавляем индекс в массив фокусируемых  */
+      End;
+      i = i + 1;
+    End;
+  END;
+
+  MACRO SplitStringToTArray(cStr, arr, cChr); /* TkvnForm: Режем текст на строки массива */
+    Var i   = 0, 
+        j   = -1,
+        len = StrLen(cStr),
+        cC  =cStr;
+    If ( cChr==Null ) cChr = "\n"; End;
+    While (i<len)
+      cC = substr(cC,i+1);
+      i  = StrBrk(cC,cChr);
+      if (i==0) i = len + 1; end; 
+      j = j + 1;
+      arr[j] = SubStr(cC,1,i-1);
+    end;
+  END;
+
+  MACRO IsLatinLetter(Ch)                     /* TkvnForm: Это символ латинск. алфавита  */
+    Private Var code = CodeFor(StrUpr(Ch));   /* Берем код символа                       */
+    Return ((code>=cnstMinLatinChar) And (code<=cnstMaxLatinChar)); /* Проверка диапазона*/
+  End;
+
+  MACRO IsDigit(Ch)                           /* TkvnForm: Это символ цифры              */
+    Private Var code = CodeFor(Ch);           /* Берем код символа                       */
+    Return ((code>=cnstMinNum) And (code<=cnstMaxNum)); /* Проверка диапазона цифр       */
+  End;
+
+  MACRO IsNumber(vStr)                        /* TkvnForm: строка является числом        */
+    Var i = 1, Ch;
+    While (i<=StrLen(vStr))                   /* Бежим по строке                         */
+      Ch = SubStr(vStr, i, 1);                /* Текущий символ                          */
+      If ( Not IsDigit(Ch) ) Return False; End; /* Это не цифра. До свидания.            */
+      i = i + 1;                              /* Бежим дальше.                           */
+    End;
+    Return True;                              /* Да, эта строка - число                  */
+  END;
+
+  MACRO ChrSplitStr(cStr, aSegment, cChr) 
+    var i  =  0,
+        j  = -1,
+        l  = StrLen(cStr),
+        cC = cStr;
+
+    While (i<l)
+      if ((i=StrBrk((cC=substr(cC,i+1)),cChr))==0) i=l+1; end; 
+      aSegment((j=j+1))=substr(cC,1,i-1);
+    End;
+    Return j;
+  END;
+
+  MACRO IsDate(dt);
+    Private Var 
+      MaxDay = 30, 
+      dd, mm, yy;
+
+    dd = Int(SubStr(dt, 1, 2));
+    mm = Int(SubStr(dt, 4, 2));
+    yy = Int(SubStr(dt, 7));
+
+    If ((mm ==  1) Or (mm ==  3) Or (mm ==  5) Or (mm ==  7) Or 
+        (mm ==  8) Or (mm == 10) Or (mm == 12) 
+       )
+      MaxDay = 31;
+    End;
+    If (mm==2) MaxDay = 29; End;
+
+    If (( dd<1 ) or (dd>MaxDay)) Return False; End;
+    If (( mm<1 ) or (mm>12))     Return False; End;
+
+    Return True;
+  END;
+
+  /* Преобразует V_STRING в V_DATE */
+  MACRO StrToDate(cStr)
+    array aStr;
+    Var dd, mm, yy;
+
+    If (( cStr == "" ) Or (cStr == V_UNDEF))  Return Date(0, 0, 0); End;
+    If (ChrSplitStr(cStr,aStr,"/.-") != 2) Return Date(0, 0, 0); End;
+
+    If ( not IsNumber(aStr[0])) Return Date(0, 0, 0); End; dd = int(aStr[0]); 
+    If ( not IsNumber(aStr[1])) Return Date(0, 0, 0); End; mm = int(aStr[1]); 
+    If ( not IsNumber(aStr[2])) Return Date(0, 0, 0); End; yy = int(aStr[2]); 
+
+    If (yy<60) yy = yy + 2000; End;
+ 
+    If (IsDate(cStr)) 
+      return(Date(dd,mm,yy));  
+    Else
+      return Date(0, 0, 0);
+    End;
+  END;
+
+  MACRO SwapElemArr(vArr, i, j);              /* TkvnForm: Меняем 2 эл-та массива местами*/
+    Var p;
+    p       = vArr[i];
+    vArr[i] = vArr[j];
+    vArr[j] = p;
+  END;
+
+  /* *********************************************************************************** */
+  /* Блок макросов работы с контролами                                                   */
+  /* *********************************************************************************** */
+
+  MACRO CtrI(Num);                         /* TkvnForm: Получить контрол по индексу   */
+    If (aIdx[Num]==Null) kvnMsgBox("Ошибочный индекс элемента: ", Num); End;
+    Return aCtrl[aIdx[Num]];
+  END;
+
+  MACRO Ctr(Name);                         /* TkvnForm: Получить контрол по имени     */
+    Var i = 0;
+
+    While (i<aCtrl.Size)                      /* Бежим по массиву контролов              */
+      If ( aCtrl[i].Name == Name) Return aCtrl[i]; End; /* Это он! Это он!               */        
+      i = i + 1;
+    End;
+    Return Null; 
+  END;
+
+  MACRO NextControl;                          /* TkvnForm: Следующий контрол             */
+    Var i = kvnSeekElemInArray(aAvCtr, ActiveControl.Num) + 1;
+
+    If (i<aAvCtr.Size)
+      Return CtrI(aAvCtr[i]).SetActive;
+    Else
+      Return CtrI(aAvCtr[0]).SetActive;
+    End;
+  END;
+
+  MACRO PrevControl;                          /* TkvnForm: Предыдущий контрол            */
+    Var i = kvnSeekElemInArray(aAvCtr, ActiveControl.Num) - 1;
+    If (i>=0)
+      Return CtrI(aAvCtr[i]).SetActive;
+    Else
+      Return CtrI(aAvCtr[aAvCtr.Size-1]).SetActive;
+    End;
+  END;
+
+  MACRO SeekControlForPoint(dx, dy)           /* TkvnForm: Найти поле, котрому пр-т (.)  */
+    Var i = 0;
+    While (i<aCtrl.Size)
+      If (aCtrl[i].PointInControl(dx, dy)) Return i; End;
+      i = i + 1;
+    End;
+    Return -1;
+  END;
+
+  MACRO SortControl;                          /* TkvnForm: Сортируем поля по возрастанию */
+    Var NextOk : Bool    = True, 
+        i      : Integer = 0, 
+        nm1    : Integer = 0, 
+        nm2    : Integer = 0, 
+        swp    : Integer = 0, 
+        p: TkvnControl   = TkvnControl;
+
+    While (NextOk)
+      NextOk = False;
+      i      = 0;
+      While (i<aCtrl.Size-1)
+        If ( aCtrl[i].Num>aCtrl[i+1].Num ) 
+          SwapElemArr(aIdx,   aCtrl[i].Num, aCtrl[i+1].Num);
+          nm1 = kvnSeekElemInArray(aAvCtr, aCtrl[i  ].Num); /* Ищем эл-т 1 в доступных   */
+          nm2 = kvnSeekElemInArray(aAvCtr, aCtrl[i+1].Num); /* Ищем эл-т 2 в активных    */
+          If ((nm1!=-1) And (nm2!=-1)) SwapElemArr(aAvCtr, nm1,  nm2); End; /* Меняем    */
+          SwapElemArr(aCtrl,  i,            i+1);
+          NextOk     = True;                  /* Что-то поменяли                         */
+        End;
+        i = i + 1;                            /* Дальше                                  */
+      End;
+    End;
+  END;
+    
+  /* *********************************************************************************** */
+  /* Блок макросов работы с формой. Инициализация. Построение контролов...               */
+  /* *********************************************************************************** */
+
+  MACRO ScanControl;                          /* TkvnForm: Построение массива контролов  */
+    Var i = 0, j, cc;
+
+    MACRO SkipControl;                        /* ScanControl: Пропустить поле            */
+      While ((SubStr(aStr[i], j, 1)=="#") And (j<=StrLen(aStr[i]))) 
+        StrSet(aStr[i], j, " ");
+        j = j + 1; 
+      End;
+    END;
+
+    MACRO BuildControl;                       /* ScanControl: Построить контрол          */
+      Var Ch, Ch1, Type, Num;
+      Var CurCtrl, p:TkvnControl;
+      Private Var cc = 0;
+      While (cc<15) aPrTxt[cc] = ""; cc = cc + 1; End;
+
+      If (j+2>StrLen(aStr[i])) Return False; End; /* Слишком мал остаток строки, это не контрол */ 
+      j = j + 1;                              /* Первый # пропустили                     */
+      Ch = StrUpr(SubStr(aStr[i], j, 1));     /* Дальше должен стоять символ типа поля   */
+
+      If (not IsLatinLetter(Ch))              /* Проверка на символ типа поля            */
+        Return False;                         /* Возвращяемся к нашим баранам            */
+      End;
+      Type = Ch;                              /* Запомнили тип поля                      */
+
+      Ch1 = SubStr(aStr[i], j+1, 2);          /* Дальше 2 символа индекса поля           */
+      If (not IsNumber(Ch1))                  /* Нет, это они, я их узнаю по походке %)  */
+        Return False;                         /* Это не поле. Вернемся к нашим баранкам  */
+      End;
+      Num = Int(Ch1);                         /* Запомнили порядковый номер              */
+
+      CurCtrl = aIdx[Num];                    /* Ищем контрол                            */
+      If (CurCtrl == Null)                    /* Это новый контрол                       */
+        p.Type = Type;                        /* Запомнили в классе тип контрола         */
+        p.Num  = Num;                         /* Запомнили в классе индекс контрола      */
+        p.Left = j - 1;                       /* Левое поле контрола                     */
+        p.Top  = i + 1;                       /* Верхнее поле контрола                   */
+        p.Parent = this;                      /* Ссылка на родительскую форму            */
+
+        If ((Type == "E") Or 
+            (Type == "B") Or
+            (Type == "G") Or
+            (Type == "F")  )                  /* Вид контрола - фокусируемый             */
+          p.Available(True);                  /* Устанавливаем вид контрола              */
+          aAvCtr[aAvCtr.Size] = Num;          /* Добавляем индекс в массив фокусируемых  */
+        End;
+        If (Type == "E")                      /* Вид контрола - редактируемый            */
+          p.Editable = True;                  /* Устанавливаем вид контрола              */
+        End;
+
+        If (Type == "C")
+          p.NoFocusColor  = DefC_NoFocusColor; 
+          p.NoFocusFColor = DefC_NoFocusFColor; 
+        End;
+        If (Type == "E")
+          p.EditColor     = DefE_EditColor;         /* Цвет активного поля (Edit Mode On)      */
+          p.EditFColor    = DefE_EditFColor;        /* Цвет фона активного поля (Edit Mode On) */
+          p.NoEditColor   = DefE_NoEditColor;       /* Цвет активного поля (Edit Mode Off)     */
+          p.NoEditFColor  = DefE_NoEditFColor;      /* Цвет фона активного поля (Edit Mode Off)*/
+          p.NoFocusColor  = DefE_NoFocusColor;      /* Цвет неактивного поля                   */
+          p.NoFocusFColor = DefE_NoFocusFColor;     /* Цвет фона неактивного поля              */
+          p.DisableColor  = DefE_DisableColor;      /* Цвет заблокированного поля              */
+          p.DisableFColor = DefE_DisableFColor;     /* Цвет фона заблокированного поля         */
+        End;
+
+        CurCtrl = aCtrl.Size;                 /* Добавляем в массив контролов            */
+        aCtrl[CurCtrl] = p;
+        aIdx[Num] = CurCtrl;                  /* Регистрируем в массиве индексов         */
+      End;
+      StrSet(aStr[i], j-1, "    ");           /* Разобрали. "Забываем" в строке разбора  */
+      j = j + 3;
+      SkipControl;                            /* Идем дальше                             */
+
+      aCtrl[CurCtrl].Right  = j - 1;          /* Правое поле контрола                    */
+      aCtrl[CurCtrl].Bottom = i + 1;          /* Нижнее поле контрола                    */
+
+      Return True;
+    END;
+
+    While (i<aStr.Size)                       /* Бежим по строкам                        */
+      j = 0;
+      While (j<StrLen(aStr[i]))               /* Бежим по текущей строке                 */
+        cc = SubStr(aStr[i], j, 1);           /* Текущий символ                          */
+        If (cc == "#")                        /* Встретился символ метки. Может, контрол */
+          If (not BuildControl) SkipControl; End; /* Попытаемся его построить            */
+        End;
+        j = j + 1;                            /* Следующий символ                        */
+      End;
+      i = i + 1;                              /* Следующая строка                        */
+    End;
+
+    SortControl;                              /* Отсортируем массив контролов            */
+  END;
+
+  /* *********************************************************************************** */
+  /* Обработчик событий формы                                                            */
+  /* *********************************************************************************** */
+
+  MACRO CurOff(dx, dy, FlagEndText);          /* Пытаемся переместить курсор             */
+    If ((dx==-1) And (dy==0))                 /* Попытка движения влево                  */
+      If (ActiveControl.PointInControl(CursorX-1, CursorY)) /* Влезаем в контрол         */
+        SetCursorPos(CursorX-1, CursorY);     /* Свободно перемещаемся                   */
+        Return True;
+      End;                                    /* Можно скролировть текст                 */
+      If (ActiveControl.PointInControl(ActiveControl.Right, CursorY-1)) /* Вверх на стр? */
+        SetCursorPos(ActiveControl.Right, CursorY-1);
+        Return True;
+      End;
+      If (ActiveControl.PrintDown)
+        Return SetCursorPos(ActiveControl.Right, ActiveControl.Top+1);
+      End;
+      Return False;
+    End;
+    If ((dx== 1) And (dy==0))
+      If (ActiveControl.PointInControl(CursorX+1, CursorY)) /* Влезаем в контрол         */
+        Return SetCursorPos(CursorX+1, CursorY); /* Свободно перемещаемся                */
+      End;
+      If (ActiveControl.PointInControl(ActiveControl.Left, CursorY+1)) /* След. строка   */
+        Return SetCursorPos(ActiveControl.Left, CursorY+1); /* Свободно перемещаемся     */
+      End;
+      If (ActiveControl.PrintUp)
+        Return SetCursorPos(ActiveControl.Left, ActiveControl.Bottom+1);
+      End;
+      Return False;
+    End;
+    If ((dx==0) And (dy==1)) 
+      If (ActiveControl.PointInControl(CursorX, CursorY+1)) /* Влезаем в контрол         */
+        Return SetCursorPos(CursorX, CursorY+1); /* Свободно перемещаемся                */
+      End;
+      Return ActiveControl.PrintUp;           /* Скроллируем текст, если повезет         */
+    End;
+    If ((dx==0) And (dy==-1))
+      If (ActiveControl.PointInControl(CursorX, CursorY-1)) /* Влезаем в контрол         */
+        Return SetCursorPos(CursorX, CursorY-1); /* Свободно перемещаемся                */
+      End;
+      Return ActiveControl.PrintDown;         /* Скроллируем текст, если повезет         */
+    End;
+  END;
+
+  MACRO EvControl;
+    Var s, pos, val, vAcc;
+
+    If ((ValType(ActiveControl.NameUserProc)==20) Or 
+                (ActiveControl.NameUserProc != Null)) /* Имеется пользовательский обработчик     */
+      val = ExecMacro2(ActiveControl.NameUserProc, Ev.KeyCode);
+      If (val!=Null) Return val; End;         /* Запускаем. Если возвращает не Null,   */
+    End;                                      /* то заканчиваем работу                   */
+
+    If (ActiveControl.Type == "F")
+      If ((ev.KeyCode == kbEnter) Or (ev.KeyCode == kbSpace))
+        ActiveControl.Text(Iif((ActiveControl.Text == Null) Or (ActiveControl.Text == ""), "1", ""));
+      End;
+      If ( ev.KeyCode == kbEsc )
+        ActiveControl.Text(OldText);
+      End;
+      Return Null;
+    End;
+
+    If (ActiveControl.Type == "G")
+
+      If (ActiveControl.LinkObj==Null) Return Null; End;
+      s = ActiveControl.LinkObj.PrintGrid(Null, ActiveControl.LinkObj.ff.GetPos, ev.KeyCode);
+      If (s==kbEsc) 
+        Return kbEsc;
+      ElIf ((s==kbTab)      or (s==kbCtrlRight)) 
+        NextControl; 
+      ElIf ((s==kbShiftTab) or (s==kbCtrlLeft )) 
+        PrevControl; 
+      End;
+      Return Null;
+    End; 
+
+    If (Not ActiveControl.Editable) Return Null; End;
+
+    If ( ev.KeyCode == kbEsc )
+      EditMode = False;
+      ActiveControl.CursorType;
+      SetCursorPos(Left+ActiveControl.Left, Top+ActiveControl.Top);
+      ActiveControl.Text(OldText);
+      Return kbEsc;
+    End;
+
+    If (( ev.KeyCode == kbF3 ) And (ActiveControl.Available))
+      If ((ValType(ActiveControl.SelectProc)==20) Or 
+                (ActiveControl.SelectProc != Null)) /* Имеется пользовательский обработчик     */
+        val = ExecMacro2(ActiveControl.SelectProc, ActiveControl.Text);
+        ActiveControl.Text(val);
+      End;
+    End;
+
+    If ((Ev.KeyCode == kbEnter) Or ((Ev.KeyCode>=32) And (Ev.KeyCode<=254)) )
+      EditMode = True;
+      If (Ev.KeyCode == kbEnter) 
+        val = ActiveControl.Text; 
+        s   = Null;
+      Else
+        val = ""; 
+        s   = Ev.KeyCode;
+      End;
+
+      s   = kvnEdit(Left+ActiveControl.Left,  Top+ActiveControl.Top,         /* pLeft, pTop            */
+                    Left+ActiveControl.Right, Top+ActiveControl.Bottom,      /* pRight, pBottom        */
+                    val, ActiveControl.EditColor, ActiveControl.EditFColor,  /* pText, pColor, pFColor */
+                    True, ActiveControl.ValIsLen,                            /* pInsertMode, pMaxLen   */
+                    ActiveControl.NameUserProc, s,                           /* pEvProc, pKeyCode      */
+                    ActiveControl);
+
+      EditMode = False;
+      ActiveControl.PrintControl;
+
+      If (s!=kbEsc) 
+        If (s==kbTab)      NextControl; End;
+        If (s==kbShiftTab) PrevControl; End;
+      End;
+
+      Return Null;
+    End;
+  END;
+
+  MACRO Events;
+    Var ii, oc;
+    ev.ClearEvent;      /* Очистим очередь событий                 */
+    While (true) 
+      ev.getEvent;                            /* Пытаемся получить событие               */
+      If (ev.TestEvent)                       /* Получили очередное событие              */
+
+        If ((ValType(NameUserProc)==20) Or 
+            (NameUserProc != Null))           /* Имеется пользовательский обработчик     */
+
+          ii = ExecMacro2(NameUserProc);
+          If (ii!=Null) Return ii; End;       /* Запускаем. Если возвращает */
+
+        End;                                  /* истину, то заканчиваем работу           */
+        If (ev.MouseUp)
+          If (ev.MouseButtons == MouseLeftButton)
+            ii = SeekControlForPoint(ev.MouseX, ev.MouseY); 
+            If ((ii != -1) And (aCtrl[ii].Available)) 
+              If (aCtrl[ii].Num == ActiveControl.Num)
+                ev.KeyDown = True; ev.KeyCode = kbEnter;
+              Else
+                aCtrl[ii].SetActive; 
+              End;
+            End;
+          End;  
+        End;
+
+        If ( ev.KeyDown )                     /* Нажата клавиша                          */
+/*          Message(ev.KeyCode);*/
+          If (( ev.KeyCode == kbEsc ) And (EditMode == False))
+            Return kbEsc;                   /* Спокойной ночи, Леопольд!               */
+          ElIf ((ev.KeyCode == kbF2) And (ExitForKeyF2))
+            Return kbF2;
+          ElIf ((ev.KeyCode == kbF9) And (ExitForKeyF9))
+            Return kbF9;
+          ElIf ((ev.KeyCode == kbShiftTab) Or 
+                (ev.KeyCode == kbCtrlLeft) Or
+                (ev.KeyCode == kbCtrlUp  )) 
+            PrevControl;
+          ElIf (((Not ActiveControl.Editable) Or (Not EditMode)        ) And
+                ((ev.KeyCode == kbUp)         Or (ev.KeyCode == kbLeft)))
+            PrevControl;
+          ElIf ((ev.KeyCode == kbTab      ) Or
+                (ev.KeyCode == kbCtrlRight) Or
+                (ev.KeyCode == kbCtrlDown ))
+            NextControl;
+          ElIf (((Not ActiveControl.Editable) Or (Not EditMode)         ) And
+                ((ev.KeyCode == kbDown      ) Or (ev.KeyCode == kbRight)))
+            NextControl;
+          ElIf ((ev.KeyCode == kbDel) And (Not EditMode))
+            ActiveControl.Text("");
+          End;
+          ii = EvControl();
+          If (ii!=Null) Return ii; End;     /* Спокойной ночи, Леопольд!               */
+        End;
+      End;
+    End;
+    Return Null;
+  END;
+
+  MACRO PrintForm(pLeft, pTop);
+    Var i, s, s1, vLen, vVal, NextOk;
+
+    If ( pLeft != Null ) Left = pLeft; End;
+    If ( pTop  != Null ) Top  = pTop;  End;
+
+    ParCount = 0;
+    NextOk   = True;
+    While ((GetParm(ParCount+3, vVal)) And (NextOk))
+      If (ParCount<aCtrl.Size)
+        If (vVal==Null) vVal = ""; End; 
+        CtrI(ParCount+1).Text(vVal);
+        ParCount = ParCount + 1;
+      Else
+        NextOk = false;
+      End;
+    End;
+
+    If ((Left<0) Or (Left>=ScreenSizeX())) Left = 0; End;
+    If ((Top<0)  Or (Top >=ScreenSizeX())) Top  = 0; End;
+
+    Right  = Left + kvnGetMaxLenInArray(aStr)+2; 
+    If (Right>ScreenSizeX()-1)   MsgBox("Форма не влезает на экран по ширине!");  Return False; End;
+
+    Bottom = Top + aStr.Size+1; 
+    If ( Bottom>ScreenSizeY()-2) MsgBox("Форма не влезает на экран по высоте!"); Return False; End;
+    PushScreen( 0, ScreenSizeY-1, ScreenSizeX-1, ScreenSizeY-1 ); /* StatusLine */
+    PushScreen(Left, Top, Right, Bottom); 
+
+    Frame   (Left,   Top,   Right,   Bottom,   DoubleFrame, Color, FColor);
+    FillRect(Left+1, Top+1, Right-1, Bottom-1, NoActColor, FColor, 32);
+
+    If (StatusLine!="") Message(StatusLine); End;
+    If (Title!="") 
+      If (StrLen(Title)>Right-Left-3) Title = SubStr(Title, 1, Right-Left-3); End;
+      Title = " " + Trim(Title) + " ";
+      DrawStr(left + (Right-Left-StrLen(Title))/2+1, Top, Title, Color, FColor, StrLen(Title));
+    End;
+
+    vLen = Right - Left - 1;
+    s1 = ""; i = 0;
+    While (i<vLen) s1 = s1 + " "; i = i + 1; End;
+
+    i = 0;
+    While (i<aStr.Size)
+      s = s1;
+      StrSet(s, 1, aStr[i]);
+      DrawStr(Left+1, Top+i+1, s, NoActColor, FColor, vLen); 
+      i = i + 1;
+    End;        
+
+    i = 0;
+    While ( i < aCtrl.Size )
+      aCtrl[i].PrintControl;
+      i = i + 1;
+    End;
+
+    If (ActiveControl==Null)
+      CtrI(aAvCtr[0]).SetActive;                /* Установим активный контрол              */
+    End;
+
+    Available = True;
+    If ( NameInitProc!=Null ) 
+      i = ExecMacro2(NameInitProc); 
+      If ( i!=Null ) Return i; End; 
+    End;
+
+    EnableFormClose = False;
+    While ( Not EnableFormClose)              /* Пока окно просит себя не закрывать      */
+      EnableFormClose = True;                 /* Может быть, окно можно закрыть          */
+
+      i = Events;                             /* Обработчик событий завершил работу      */
+      If ( NameDestrProc!=Null )              /* Есть процедура постобработки            */
+        s = ExecMacro2(NameDestrProc, i);     /* Запустили постобработчик                */ 
+        If ( s != Null ) i = s; End;          /* Постобработчик вернул значение          */
+      End;                                    /* Если постобр. устан. EnableFormClose... */
+      If (i!=27) 
+        s = 0;
+        While ((s<aCtrl.Size) And (EnableFormClose))
+          If ((aCtrl[s].Available) And (aCtrl[s].VerifyValids == False))
+            EnableFormClose = False; 
+          End;
+          s = s + 1;
+        End;
+      End;
+    End;
+    Available = False;
+    PopScreen;
+    PopScreen;
+
+    If (i!=kbEsc) 
+      ParIdx = 0;
+      While (ParIdx<ParCount) 
+        GetParm(ParIdx+3, s1);
+        vVal = CtrI(ParIdx+1).Text;
+        vVal = ValToType(vVal, s1);
+        SetParm(ParIdx+3, vVal);
+        ParIdx = ParIdx + 1;
+      End; 
+    End;
+    Return i;
+  END;
+
+  MACRO InitForm;
+    SplitStringToTArray(strForm, aStr, "|");  /* Порежем строку инициализации в массив   */
+    ScanControl;                              /* Наловим контролов                       */
+  END;
+
+END;
+
+/* *** */
+
+MACRO kvnSelectFilialNew(FilName, Left, Top);
+  Private FILE dp_dep(dp_dep) key 0; /* Key 0: Code */
+  Private array aFil, aCode;
+  Private Var i  = 0, 
+              s  = "", 
+              Ch = 0;
+
+  If (Left == Null) Left = 0; End;
+  If (Top  == Null) Top  = 0; End;
+
+  ReWind(dp_dep);
+  While ( (Next(dp_dep)))
+    aCode[i] = dp_dep.Code; 
+    s = dp_dep.Name; While (StrLen(s)<9) s = s + " "; End;
+    aFil[i] = s + " | ";
+    s = dp_dep.Comment; While (StrLen(s)<30) s = " " + s; End;
+    aFil[i]  = aFil[i] + s;
+    i = i + 1;
+  End;
+  Ch = kvnMenu(aFil, "Выберите филиал", "Выберите филиал", Left, Top);
+  If (Ch>=0) 
+    Ch = aCode[Ch]; 
+    If (GetParm(0, s))
+      dp_dep.Code = Ch;
+      GetEQ(dp_dep);
+      SetParm(0, dp_dep.Name);
+      If (GetParm(1, s)) SetParm(1, dp_dep.Comment); End;
+    End;
+  End;
+
+  Return Ch; 
+END;
+
+Private Var 
+  grAccount = TkvnGrid, 
+  grClient  = TkvnGrid, 
+  grBalance = TkvnGrid, 
+  grOper    = TkvnGrid;
+
+Private MACRO kvnGetParty(cVal);
+  Private Var pt = TbFile("party.dbt", "R", 0);
+  pt.rec.PartyID = cVal; 
+  pt.GetEQ;
+  Return pt.rec.Name;
+END;
+
+Private MACRO kvnGetCode(cVal);
+  Private Var pc  = TbFile("partcode.dbt", "R", 0);
+  pc.rec.PartyID  = cVal; 
+  pc.rec.CodeKind = 1;
+  pc.GetEQ;
+  Return pc.rec.Code;
+END;
+
+Private MACRO kvnMySeek(Val);
+
+  If (grAccount.CurX != 0) Return -9999; End; /* Не наша стезя. Пусть пашет стандартная функция */
+
+  grAccount.ff.rec.Chapter = 1;
+  grAccount.ff.rec.Account = Val;
+  If (Not grAccount.ff.GetEQ) Return -1; End; /* Значение не найдено                            */
+  Return grAccount.ff.GetPos;
+END;
+
+Private MACRO kvnMySeek1(Val);
+  Private Var pc  = TbFile("partcode.dbt", "R", 1);
+
+  If (grClient.CurX != 0) Return -9999; End; /* Не наша стезя. Пусть пашет стандартная функция */
+
+  pc.rec.CodeKind          = 1;
+  pc.rec.Code              = Val;
+  If (Not pc.GetEQ) Return -1; End;           /* Значение не найдено                            */
+
+  grClient.ff.rec.PartyID     = pc.rec.PartyID;
+  grClient.ff.rec.ServiceKind = 0;
+  If ((grClient.ff.GetGE) And (grClient.ff.rec.PartyID == pc.rec.PartyID))
+    Return grClient.ff.GetPos;
+  End;
+
+  Return -1;
+END;
+
+Private Var ForPartyID;
+
+Private MACRO MyReWindForAccount;
+  Private Var ret;
+
+  grAccount.ff.Clear;
+  grAccount.ff.rec.Chapter    = 1;
+  grAccount.ff.rec.Open_Close = "";
+  grAccount.ff.rec.Client     = ForPartyID;
+  grAccount.ff.GetGE;
+  ret = (grAccount.ff.rec.Client == ForPartyID);
+  grAccount.ff.Prev;
+/*  kvnMsgBox(grAccount.ff.rec.Client, "|", ForPartyID);*/
+  Return ret;
+END;
+
+Private MACRO MyVerifyForAccount;
+  If (grAccount.ff.rec.Client != ForPartyID) Return False; End;
+  Return True; 
+END;
+
+MACRO kvnSelectAccount(pLeft, pTop, pRight, pBottom, pTitle, vAcc, vCli, vName, vForPartyID, vDefault);
+/*                     0      1     2       3        4       5     6     7      8            9 */          
+  Var tt, MyKey = 0;
+
+  If (pTitle==Null) pTitle = "Выберите счет"; End;
+
+  ForPartyID = vForPartyID;
+  If (vForPartyID!=Null) 
+    MyKey = 2; 
+    grAccount.ReWindProc = @MyReWindForAccount;
+    grAccount.LocateProc = @MyVerifyForAccount;
+  Else
+    MyKey = 0;
+    grAccount.ReWindProc = Null;
+    grAccount.LocateProc = Null;
+  End; 
+
+  grAccount.ff         = TbFile("account.dbt", "R", MyKey);
+  grAccount.aFldNm[0]  = "Account"; grAccount.aFldSz[0] = 25; 
+  grAccount.aFldNm[1]  = "Client";  grAccount.aFldSz[1] = 35; grAccount.aProc[1] = @kvnGetParty;
+  grAccount.Title      = pTitle;
+  grAccount.SeekProc   = @kvnMySeek;
+
+  grAccount.SetSize(pLeft, pTop, pRight, pBottom);
+  grAccount.SetSystemPalette;
+
+  If (grAccount.PrintGrid(vDefault)<0) Return False; End;
+
+  SetParm(5, grAccount.ff.rec.Account); /* vAcc */
+  SetParm(6, grAccount.ff.rec.Client);  /* vCli */
+  tt = grAccount.GetFld(1);
+  SetParm(7, tt);
+  Return True;
+END;
+
+MACRO kvnSelectClient(pLeft, pTop, pRight, pBottom, pTitle, vPartyID, vCliCode, vName, vAcc, vDefault);
+/*                    0      1     2       3        4       5         6         7      8     9*/  
+  Var tt, 
+      acc = TbFile("account.dbt", "R", 2);
+
+  If (pTitle==Null) pTitle = "Выберите клиента"; End;
+
+  grClient.ff        = TbFile("client.dbt", "R", 0);
+  grClient.aFldNm[0] = "PartyID";
+  grClient.aFldCp[0] = "Код";
+  grClient.aProc[0] = @kvnGetCode;
+
+  grClient.aFldNm[1] = "PartyID";    
+  grClient.aFldCp[1] = "Наименование";    
+  grClient.aFldSz[1] = 45; 
+  grClient.aProc[1] = @kvnGetParty;
+
+  grClient.Title     = pTitle;
+  grClient.SeekProc  = @kvnMySeek1;
+
+  grClient.SetSize(pLeft, pTop, pRight, pBottom);
+  grClient.SetSystemPalette;
+
+  If (vDefault!=Null) 
+    If (kvnMySeek1(vDefault)==-1) vDefault = Null; End;
+  End;
+
+  If (grClient.PrintGrid(vDefault)<0) Return False; End;
+
+  tt = grClient.ff.rec.PartyID; SetParm(5, tt);  /* vPartyID */
+  tt = grClient.GetFld(0);      SetParm(6, tt);  /* vCliCode */
+  tt = grClient.GetFld(1);      SetParm(7, tt);  /* vName    */
+
+  acc.rec.Chapter    = 1;
+  acc.rec.Open_Close = "";
+  acc.rec.Client     = grClient.ff.rec.PartyID;
+  acc.rec.Sort       = "";
+  If ((acc.GetGE) And (acc.rec.Client == grClient.ff.rec.PartyID))
+    tt = acc.rec.Account;
+  Else
+    tt = "";
+  End;
+  
+  SetParm(8, tt); /* vAcc */
+
+  Return True; 
+
+END;
+
+MACRO kvnSelectBalance(pLeft, pTop, pRight, pBottom, pTitle, vBal, vDefault);
+/*                     0      1     2       3        4       5   */
+  If (pTitle==Null) pTitle = "Выберите балансовый счет"; End;
+
+  grBalance.ff        = TbFile("balance.dbt", "R", 0);
+  grBalance.aFldNm[0] = "Balance";   grBalance.aFldSz[0] = 8;
+  grBalance.aFldNm[1] = "Name_Part"; grBalance.aFldSz[1] = 45;
+  grBalance.Title     = pTitle;
+
+  grBalance.SetSize(pLeft, pTop, pRight, pBottom);
+  grBalance.SetSystemPalette;
+  If (vDefault!=Null) 
+    grBalance.ff.rec.Chapter  = 1;
+    grBalance.ff.rec.iNumPlan = 0;
+    grBalance.ff.rec.Balance  = vDefault;
+    If (not grBalance.ff.GetEQ) vDefault = Null; End;
+  End;
+
+  If (grBalance.PrintGrid(vDefault)<0) Return False; End;
+
+
+  SetParm(5, grBalance.ff.rec.Balance);
+  Return True;
+
+END;
+
+MACRO kvnSelectOper(pLeft, pTop, pRight, pBottom, pTitle, vOper, vOperName, vDefault);
+/*                     0      1     2       3        4       5   6 */
+  If (pTitle==Null) pTitle = "Выберите операциониста"; End;
+
+  grOper.ff        = TbFile("person.dbt", "R", 0);
+  grOper.aFldNm[0] = "Oper"; grOper.aFldSz[0] = 8;
+  grOper.aFldNm[1] = "Name"; grOper.aFldSz[1] = 45;
+  grOper.Title     = pTitle;
+
+  grOper.SetSize(pLeft, pTop, pRight, pBottom);
+  grOper.SetSystemPalette;
+
+  If (grOper.PrintGrid(vDefault)<0) Return False; End;
+
+  SetParm(5, grOper.ff.rec.Oper);
+  SetParm(6, grOper.ff.rec.Name);
+  Return True;
+
+END;
+
+MACRO kvnSimpleSelectAccount(vAcc);
+  Var val, ret;
+
+  val = kvnSelectAccount(10,    0,    75,     18,      Null,   ret, Null, Null,  Null,        vAcc);
+                      /* pLeft, pTop, pRight, pBottom, pTitle, vAcc, vCli, vName, vForPartyID, vDefault); */
+  If (val) Return ret; End;
+  Return vAcc;
+END;
+    
+MACRO kvnSimpleSelectOper(vOper);
+  Var val, ret;
+  val = kvnSelectOper(10,    0,    75,     18,      Null,   ret, Null, vOper);
+                     /* pLeft, pTop, pRight, pBottom, pTitle, vOper, vName); */
+  If (val) return ret; End;
+  Return vOper;
+END;
+
+MACRO kvnInputPassword(Quest, len);
+
+  Private Var 
+    i            = 0, 
+    s            = "", 
+    ss           = "";
+
+  If (Quest == Null) Quest = "Введите пароль"; End;
+  If (len   == Null) len   = 10;               End;
+
+  i = 0; While (i<len+1) ss = ss + " "; i = i + 1; End;
+  i = 0; While (i<StrLen(Quest)+3+len) s = s + "═"; i = i + 1; End;
+
+  kvnPushScreen;
+  kvnClearScreen;
+
+  DrawStr( 10, 10, "╔"  + s                + "╗", WHITE, DARKGRAY, StrLen(s)+2); 
+  DrawStr( 10, 11, "║ " + Quest + " " + ss + "║", WHITE, DARKGRAY, StrLen(s)+2); 
+  DrawStr( 10, 12, "╚"  + s                + "╝", WHITE, DARKGRAY, StrLen(s)+2); 
+
+  i = 13 + StrLen(Quest);
+  s = "";
+  If (kvnEdit(i, 11, i + len, 11, s, WHITE, DARKGRAY, False, len, Null, Null, Null, True) == 27) s = Null; End; 
+
+  kvnPopScreen;
+  return s;
+
+END;
+
