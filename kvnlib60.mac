@@ -1,0 +1,1596 @@
+Import FIInter, "oramain.mac";
+import "userglobals.mac";
+Private Var {CurDate};
+/* *********************************************************************************** */
+/* Раздел общих констант                                                               */
+/* *********************************************************************************** */
+CONST cnstMemorderStatus_Over  = 1;          /* Отложенные документы в memorder.dbt    */                            
+CONST cnstMemorderStatus_Open  = 2;          /* Открытые документы в memorder.dbt      */
+CONST cnstMemorderStatus_Close = 3;          /* Закрытые документы в memorder.dbt      */
+
+CONST 
+  cnstCodeOKONH =  7, 
+  cnstCodeKFS   =  3, 
+  cnstCodeKOPF  =  4, 
+  cnstCodeOKVED = 17; 
+
+CONST kndParty                 = 3;
+CONST kndAccount               = 4;
+
+CONST
+  xlLeft     = -4131, 
+  xlCenter   = -4108, 
+  xlRight    = -4152, 
+  xlBottom   = -4107, 
+  xlTop      = -4160, 
+  xlLastCell = 11   , 
+  wdLineStyleSingle = 1, 
+  wdLineWidth050pt  = 4, 
+  wdBorderTop       = -1;
+
+CONST cnstCrLf = StrFor(13);/* + StrFor(10);*/
+
+Var kvnDebugMode = False;
+
+/* ------------------------------------------------------------------------------------- */
+MACRO kvnIif(p_statement, p_True, p_False);
+  If (p_statement)
+    Return p_True;
+  End;
+  Return p_False;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO RepairName(pName)
+  Var ret = StrUpr(Trim(pName));
+
+  If (SubStr(ret, 1, 2)!="T_") ret = "T_" + ret; End;
+  Return ret;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO kvnGetChapter(acc);                        /* Получить № главы, содерж. счет         */
+  Var БС;
+  
+  If (( acc == V_UNDEF ) Or (Acc == Null)) Return 0; End;
+
+  БС = int (substr (acc, 1, 5));
+  if (( БС >= 98000 ) and ( БС <= 98090 )) return 5; end;
+  if (( БС >= 93001 ) and ( БС <= 97001 )) return 4; end;
+  if ((( БС >= 90601 ) and ( БС <= 91904 )) or ( БС == 99999 ) or ( БС == 99998 ))
+      return 3; 
+  end;
+  if (( БС >= 80101 ) and ( БС <= 85501 )) return 2; end;
+  return 1;
+
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO FindAccForAccount(pAccount, pField)
+  If (pField == Null) pField = "Client"; End;
+  Var out_fld = RepairName(pField);
+  Var sql = "SELECT " + out_fld + " FROM DACCOUNT_DBT WHERE T_ACCOUNT = '" + pAccount + "'";
+  Var rs = kvnRsdRecordset(sql);
+
+  If (rs!=Null) Return rs.Value(0); End;
+  Return Null;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO FindNameForPartyID(pPartyID,pName)           /* Найти имя клиента в Party */
+  Var sql = "SELECT T_NAME, T_SHORTNAME FROM DPARTY_DBT WHERE T_PARTYID = " + pPartyID;
+  Var rs  = kvnRsdRecordset(sql);
+  If (rs!=Null)
+    SetParm(1, rs.Value("T_NAME"));
+    Return rs.Value("T_SHORTNAME");
+  End;
+  SetParm(1, Null);
+  Return Null;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO FindPartyForPartyID(pPartyID, pField)
+  Var out_fld = RepairName(pField);
+  Var sql = "SELECT " + out_fld + " FROM DPARTY_DBT WHERE T_PARTYID = " + pPartyID;
+  Var rs  = kvnRsdRecordset(sql);
+  If (rs!=Null) Return rs.Value(0); End;
+  Return Null;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO FindPartyForAccount(pAccount, pField)
+  Var pid = FindAccForAccount(pAccount, "Client");
+  If ((StrUpr(pField)=="PARTYID") Or (pField == Null)) Return pid; End;
+  Return FindPartyForPartyID(pid, pField);
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetPartyIDForClientID(pClientID)
+  Var sql = String("SELECT T_PARTYID FROM DPARTCODE_DBT WHERE T_CODEKIND = 1 AND T_CODE = '", pClientID, "'");
+  Var rs  = kvnRsdRecordset(sql);
+  If (rs!=Null)
+    Return rs.Value("T_PARTYID"); 
+  End;
+  Return Null;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetPartcodeForPartyID(pPartyID, pCodeKind)
+  Var sql;
+  If (pPartyID == Null) Return "";    End;
+  If (pCodeKind==Null) pCodeKind = 1; End;
+  sql = String("SELECT T_CODE FROM DPARTCODE_DBT WHERE T_CODEKIND = ", pCodeKind, 
+                                                  " AND T_PARTYID = ", pPartyID , 
+                                                  " AND T_STATE = 0"
+              );
+  Var rs  = kvnRsdRecordset(sql);
+  If (rs!=Null)
+    Return rs.Value("T_CODE"); 
+  End;
+  Return Null;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetAddressForPartyID(pPartyID)
+  Var ret, post;
+   /* Получить адрес stype = 1 - юридический 2 - фактический*/
+  If (pPartyID == Null) Return ""; End;
+
+  Var sql = String("SELECT * FROM DADRESS_DBT WHERE T_PARTYID = ", pPartyID);
+  Var rs ;
+  Var ii, vv;
+  rs = kvnRsdRecordset(sql);
+  If (rs)
+    ii = 1;
+    While (GetParm(ii, vv))
+      SetParm(ii, kvnGetValue(rs.Value(vv), ""));
+      ii = ii + 1;
+    End;
+    ret  = Trim(Morda(rs.Value("T_ADRESS")));
+    post = Trim(Morda(rs.Value("T_POSTINDEX")));
+
+    If (post!="")
+      If (Index(ret, post)<=0)
+        ret = String(post, ", ", ret);
+      End;
+    End;
+    Return ret;
+  End;
+  ii = 1;
+  While (GetParm(ii, vv))
+    SetParm(ii, "");
+    ii = ii + 1;
+  End;
+
+  Return "";
+END;
+
+MACRO GetAddressForPartyIDType(pPartyID, stype)
+   /* Получить адрес stype = 1 - юридический 2 - фактический*/
+  Var ret, post;
+  If (pPartyID == Null) Return ""; End;
+
+  Var sql = String("SELECT * FROM DADRESS_DBT WHERE T_PARTYID = ", pPartyID);
+  Var rs ;
+  if (sType != Null)
+   sql = sql + string(" and t_type = " , stype);
+  end;
+  rs = kvnRsdRecordset(sql);
+  If (rs)
+    ret  = Trim(rs.Value("T_ADRESS"));
+    post = Trim(Morda(rs.Value("T_POSTINDEX")));
+    If (post!="")
+      If (Index(ret, post)<=0)
+        ret = String(post, ", ", ret); 
+      End;
+    End;
+    Return ret;
+  End;
+  Return "";
+END;
+
+/* ---------------------------------------------------------------------------- */
+MACRO GetRegionName(p_PartyID)
+  Var sql = String("SELECT T_NAMEREGION FROM DPARTY_DBT pt \n "                   +
+                   "JOIN DADRESS_DBT adr ON adr.T_PARTYID = pt.T_PARTYID \n"      +
+                   "JOIN DPTREGION_DBT reg ON reg.T_CODEREGION = adr.T_REGION \n" +  
+                   "WHERE pt.T_PARTYID = ", p_PartyID
+                  );
+  Var rs = kvnRsdRecordset(sql);
+  If (rs!=Null)
+    Return Morda(rs.Value(0));
+  End;
+  Return "";
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetPhoneNumberForPartyID(pPartyID)
+  Var sql = String("SELECT T_Phonenumber, T_Phonenumber2 FROM DADRESS_DBT WHERE T_PARTYID = ", pPartyID);
+  Var rs  = kvnRsdRecordset(sql);
+
+  If (rs)
+    return Morda(String(rs.Value("T_Phonenumber"))/*, ", ", rs.Value("T_Phonenumber2")*/);
+  End;
+  Return "";
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetFieldPersonForOper(p_Oper, p_Field)
+private var {oper};
+  If (p_Oper  == Null) p_Oper  = {Oper};   End;
+  If (p_Field == Null) p_Field = "T_NAME"; End;
+  Var sql = String("SELECT ", p_Field, " FROM DPERSON_DBT WHERE T_OPER = ", p_Oper); 
+  Var rs  = kvnRsdRecordset(sql);
+
+  If (rs)
+    Return Morda(String(rs.Value(p_Field)));
+  End;
+  Return "";
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetOKONHforPartyId(pPartyID)
+   /*По коду клиента получить его код ОКОНХ*/
+  Var sql, rs, _Ret;
+  var tempStr = string("0000000000",pPartyID);
+  tempstr = substr(tempStr, StrLen(tempStr)-9);
+
+  sql = String("SELECT T_CODELIST, t_numinlist, t_nameObject FROM dobjattr_dbt a1, dobjatcor_dbt a2 \n ", 
+               "WHERE a1.t_ObjectType = a2.t_objecttype AND a1.t_GroupId = a2.t_groupId \n ", 
+               "AND a1.t_AttrId = a2.t_AttrId AND a2.t_object = '", TempStr, 
+               "' AND a2.t_objecttype = ", 3, " \n ", 
+               "AND a2.t_groupId = ", 7);
+
+  rs = kvnRsdRecordset(sql);
+  If (rs)
+    _ret = rs.Value("T_CODELIST"); 
+    if (_Ret == strfor(1))
+       _ret = rs.Value("t_numinlist"); 
+    end;
+/*
+    if (_Ret == strfor(1))
+       _ret = rs.Value("t_nameObject"); 
+    end;
+*/
+    return (_Ret);
+  End;
+  Return "";
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetNumberRegTaxforPartyId(pPartyID,pDocKindId);
+   /*По коду клиента получить его номер регистрации в налоговой инспекции*/
+
+  Var sql = String("SELECT t_RegNumber from dpartyreg_dbt where t_partyID = ", pPartyID);
+  Var rs;
+  if ((pDocKindId != V_UNDEF ) and (pDocKindId != Null)) 
+     sql = sql + " AND T_DOCKINDID="+string(pDocKindId);
+  end;
+  //msgbox(sql);
+  rs = kvnRsdRecordset(sql);
+  If (rs!=Null) 
+    Return Morda(rs.Value("T_RegNumber"));
+  End;
+  Return "";
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO RsLinkObjForPartyId(pPartyID, Kind);
+  Var sql = String(
+    "SELECT atr.* FROM DOBJATCOR_DBT obj                 \n ", 
+    "JOIN DOBJATTR_DBT atr ON                            \n ", 
+    "  (atr.T_OBJECTTYPE = obj.T_OBJECTTYPE) AND         \n ", 
+    "  (atr.T_GROUPID    = obj.T_GROUPID   ) AND         \n ", 
+    "  (atr.T_ATTRID     = obj.T_ATTRID    )             \n ", 
+    "WHERE obj.T_OBJECTTYPE = ", 3, 
+    " AND T_OBJECT = '", pPartyID:o:10, 
+    "' AND obj.T_GROUPID = ", Kind,
+    " AND obj.t_ValidToDate = '31.12.9999'" +
+    " ORDER BY decode(obj.t_general,chr(0),'Y','X')"
+  );
+  Return kvnRsdRecordset(sql);
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetLinkObjForPartyId(pPartyID, Kind, FieldName, pDelimSymbol)
+  Var ret = "";
+
+  If (pDelimSymbol == Null) pDelimSymbol = ", "; End;
+  If (FieldName == Null) FieldName = "T_CODELIST"; End;
+
+  Var rs = RsLinkObjForPartyId(pPartyID, Kind);
+  Var ok = (rs!=Null);
+  While (ok)
+    If (ret != "") ret = ret + pDelimSymbol; End;
+    ret = ret + rs.Value(FieldName);
+    ok = rs.MoveNext();
+  End;
+
+/*
+  If (rs)
+    Return rs.Value(FieldName); 
+  End;
+*/
+  Return ret;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO ConverNoteDate(p_Date)
+  Var 
+    aDate = TArray, 
+    i     = 0, 
+    j     = 0;
+
+  While (i <= 2)
+    If (i==2)
+      aDate[i] = CodeFor(SubStr(p_Date,i+1,1)) + 1792;
+    Else
+      aDate[i] = CodeFor(SubStr(p_Date,i+1,1));
+    End;
+
+    j = j + aDate[i];
+    i = i + 1;
+  End;
+
+  If ((j > 1792) And (aDate[2]!=1792))
+    /*MsgBox(aDate[0], "..", aDate[1], "..", aDate[2], "..", j);*/
+    Return Date(aDate[0], aDate[1], aDate[2]);
+  End;
+  Return Date(0,0,0);
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO rsGetNote(p_ObjType, p_ID, p_NoteKind);
+  Var sql, rs, ok, docID;
+  If (p_ObjType == 3) /* partyid */
+    docID = String(p_ID:o:10);
+  ElIf (p_ObjType == 4)
+    docID = p_ID;
+    While (StrLen(docID)<27) docID = "0" + docID; End;
+    docID = String(kvnGetChapter(p_ID):o:2) + docID;
+  Else
+    MsgBox("? kvnlib60.mac ?", p_ObjType);
+    Return; 
+  End;
+
+  sql = String(
+    "SELECT UTL_RAW.CAST_TO_VARCHAR2(val.T_TEXT) txt,   \n", 
+    "t_NOTETYPE type, val.T_NOTEKIND, val.T_VALIDTODATE \n", 
+    "FROM DNOTEKIND_DBT knd JOIN DNOTETEXT_DBT val ON   \n", 
+    "(val.T_OBJECTTYPE = knd.T_OBJECTTYPE) AND (val.T_DOCUMENTID = '", docID, "') \n", 
+    "AND val.T_NOTEKIND = knd.T_NOTEKIND AND val.T_VALIDTODATE = '31/12/9999' \n", 
+    "WHERE knd.T_OBJECTTYPE = ", p_ObjType, " AND knd.T_NOTEKIND = ", p_NoteKind
+  );
+
+  rs = kvnRsdRecordset(sql);
+
+  If (rs!=Null)
+    If (rs.Value("TYPE")==7)
+      Return rs.Value("TXT");
+    ElIf (rs.Value("TYPE")==9)
+      Return ConverNoteDate(rs.Value("TXT"));
+    Else
+      MsgBox("NOTETYPE = ", rs.Value("TYPE"), ":", rs.Value("TXT"));
+    End;
+  End;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO kvnGetOGRN(p_PartyID);
+  Var ret, sql, rs, ok;
+
+  ret = GetPartcodeForPartyID(p_PartyID, 27); /* Считаем 27 код для субъекта (ALT+1)                */
+  If (ret != Null) Return ret; End;
+
+  sql = String("SELECT T_REGNUMBER FROM DPARTYREG_DBT \n", /* Считаем из данных о регистрации (F11) */
+               "WHERE T_PARTYID = ", p_PartyID, " AND T_PARTYKIND = 7 AND T_OPENCLOSE != 'X'"
+              );
+  rs = kvnRsdRecordset(sql);
+  If (rs!=Null)
+    ret = rs.Value("T_REGNUMBER");
+    If ((ret        != Null) And 
+        (Morda(ret) != ""  )
+       )
+      Return ret; 
+    End;
+  End;
+
+  ret = kvnGetIniString("ОГРН", "ПРИМЕЧАНИЯ\\СУБЪЕКТЫ");      /* Считаем из примечаний    */
+  ret = rsGetNote(3, p_PartyID, ret);
+
+  Return ret;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO kvnGetDateOGRN(p_PartyID);
+  Var ret, sql, rs, ok;
+
+  ret = kvnGetIniString("ОГРН ДАТА", "ПРИМЕЧАНИЯ\\СУБЪЕКТЫ"); /* Считаем из примечаний    */
+  ret = rsGetNote(3, p_PartyID, ret);
+  If ((ret        != Null) And 
+      (Morda(ret) != ""  )
+     )
+    Return Date(ret); 
+  End;
+
+  sql = String("SELECT T_REGDATE FROM DPARTYREG_DBT \n",   /* Считаем из данных о регистрации (F11) */
+               "WHERE T_PARTYID = ", p_PartyID, " AND T_PARTYKIND = 7 AND T_OPENCLOSE != 'X'"
+              );
+  rs = kvnRsdRecordset(sql);
+  If (rs!=Null)
+    ret = rs.Value("T_REGDATE");
+    If ((ret        != Null) And 
+        (Morda(ret) != ""  )
+       )
+      Return Date(ret); 
+    End;
+  End;
+
+  Return Date(0, 0, 0);
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetEconomCode(pPartyID, pCode, pFieldName, pDelimSymbol)
+  Var sql, rs, ret, t;
+
+  pCode = StrUpr(Trim(pCode));
+  If ((pCode == "ИНН") or (pCode == "ИННКР") or (pCode == "КПП"))
+    sql = String("SELECT T_CODE FROM DPARTCODE_DBT WHERE T_CODEKIND = 16 AND T_PARTYID = ", pPartyID);
+    rs  = kvnRsdRecordset(sql);
+    If (Not rs) Return Null; End;                 /* Не нашли никаких ИНН и КПП */
+    ret = rs.Value("T_CODE");                     /* ИНН/КПП                    */
+    If (pCode == "ИНН")   Return ret; End;        /* ИНН/КПП                    */
+
+    t = Index(ret, "/");                          /* Нашли разделитель          */
+    If (t==0)
+      If (pCode == "ИННКР") Return ret; End;
+      If (pCode == "КПП"  ) Return "";  End;
+    Else
+      If (pCode == "ИННКР") Return SubStr(ret, 1, t-1); End;
+      If (pCode == "КПП"  ) Return SubStr(ret, t+1);    End;
+    End;
+    Return "?";
+  ElIf (pCode == "ОКОНХ")
+    Return GetLinkObjForPartyId(pPartyID, cnstCodeOKONH, pFieldName, pDelimSymbol);
+  ElIf (pCode == "КФС") 
+    Return GetLinkObjForPartyId(pPartyID, cnstCodeKFS,   pFieldName, pDelimSymbol);
+  ElIf (pCode == "КОПФ") 
+    Return GetLinkObjForPartyId(pPartyID, cnstCodeKOPF,  pFieldName, pDelimSymbol);
+  ElIf (pCode == "ОКВЭД") 
+    Return GetLinkObjForPartyId(pPartyID, cnstCodeOKVED, pFieldName, pDelimSymbol);
+  ElIf (pCode == "ОКПО") 
+    Return FindPartyForPartyID(pPartyID, "T_OKPO");
+  ElIf (pCode == "БИК") 
+    Return GetPartcodeForPartyID(pPartyID, 3); 
+  ElIf (pCode == "ОГРН")
+    Return kvnGetOGRN(pPartyID);
+  ElIf (pCode == "ДАТА ОГРН")
+    Return kvnGetDateOGRN(pPartyID);
+  End;
+/*
+*/
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetOurPartyID
+  Private Var {SelfId};
+  Return {SelfId}; 
+  /*Return GetPartyIDForClientID(1000);*/
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetOurName()
+  Private Var {Name_Bank};
+  Return {Name_Bank}; 
+  /*   Return MFONAMEBANK; */
+/*
+  Var sql = String("SELECT T_NAME FROM DPARTY_DBT WHERE T_PARTYID = ", GetOurPartyID());
+  Var rs  = kvnRsdRecordset(sql);
+  If (rs)
+    Return rs.Value("T_NAME");
+  End;
+  Return Null;
+*/
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetOurAddress()
+  Return GetAddressForPartyID(GetOurPartyID());
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO OperInGroup(pOper, pGroup)
+  Var sql = String("SELECT T_OPER FROM DOPERGRUP_DBT WHERE T_OPER = ", pOper, " AND T_GROUPNUM = ", pGroup); 
+  Return kvnRsdRecordset(sql);
+END;
+/* ---------------------------------------------------------------------------- */
+/*
+MACRO OperInGroupText(pOper, pGroup)
+  Var sql = "SELECT t1.T_OPER FROM DOPERGRUP_DBT t1, DLISTGRUP_DBT t2 WHERE t1.T_OPER = ? AND t1.T_GROUPNUM = t2.T_NUMBER AND t2.T_NAME = ?";
+  Return kvnRsdRecordset(sql, pOper, pGroup);
+END;
+*/
+/* ---------------------------------------------------------------------------- */
+MACRO OperInGroupText(pOper, pGroup)
+  If ((pOper==Null) Or (Int(pOper)==0)) Return False; End;
+  Var sql = "SELECT T_OPER FROM dlistgrup_dbt JOIN DOPERGRUP_DBT ON T_GROUPNUM = T_NUMBER \n" +
+            "WHERE (T_NAME LIKE '" + pGroup +"') AND (T_OPER = " + pOper + ")";
+  Return kvnRsdRecordset(sql);
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetPaymentIdForApKey(pApKind, pApKey)
+  Var sql = String("SELECT T_PAYMENTID FROM DPMDOCS_DBT \n", 
+                   "WHERE T_APPLICATIONKIND = ", pApKind, 
+                   " AND T_APPLICATIONKEY = '", pApKey, "'"
+                  ); 
+  Var rs  = kvnRsdRecordset(sql);
+
+  If (rs!=Null)
+    Return rs.Value(0);
+  End;
+  
+  Return 0;
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO GetAllPmdocsForPaymentId(pPaymentID)
+  Var sql = String(
+    "SELECT t1.*  FROM DARHDOC_DBT t1, DPMDOCS_DBT t2 ", 
+    "WHERE t2.T_PAYMENTID = ", pPaymentID, " AND "     , 
+    "t1.T_IAPPLICATIONKIND = t2.T_APPLICATIONKIND AND ", 
+    "t1.T_APPLICATIONKEY = t2.T_APPLICATIONKEY "       , 
+    "UNION "                                           , 
+    "SELECT t1.* FROM DDOCUMENT_DBT t1, DPMDOCS_DBT t2 ", 
+    "WHERE t2.T_PAYMENTID = ", pPaymentID, " AND "      ,
+    "t1.T_IAPPLICATIONKIND = t2.T_APPLICATIONKIND AND " , 
+    "t1.T_APPLICATIONKEY = t2.T_APPLICATIONKEY "
+  );
+  Return kvnRsdRecordset(sql);
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO kvnVAccountIsCash(p_Account):Bool;
+  Var sql = "SELECT T_TYPE_ACCOUNT FROM DACCOUNT$_DBT WHERE T_ACCOUNT = '" + p_Account + "'";
+  Var rs  = kvnRsdRecordset(sql);
+
+  If (rs == Null) Return False; End;               /* Счет не найден            */
+  Return (Index(rs.Value(0), "А") > 0);
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO kvnVAccountIsAU(p_Account):Bool;
+  Var sql = "SELECT T_TYPE_ACCOUNT FROM DACCOUNT$_DBT WHERE T_ACCOUNT = '" + p_Account + "' AND T_CODE_CURRENCY = 2";
+  Var rs  = kvnRsdRecordset(sql);
+  Return (rs!=Null);
+END;
+/* ---------------------------------------------------------------------------- */
+MACRO kvnGetDepartmentForVAccount(p_Account);
+  Var sql = "SELECT T_DEPARTMENT FROM DACCOUNT$_DBT WHERE T_ACCOUNT = '" + p_Account + "'"; 
+  Var rs  = kvnRsdRecordset(sql);
+  If (rs == Null) Return Null; End;                /* Счет не найден            */
+  Return rs.Value(0);
+END;
+/* ------------------------------------------------------------------------------------- */
+MACRO kvnGetISOCode( FIID:integer ):integer
+  Record fi( "fininstr.dbt", "bank.def" );
+
+  If ( FIID >= 0 )
+    If ( ПолучитьФинИн( FIID, fi ) == 0 )
+      Return fi.iso_number;
+    End;
+  End;
+  Return 0;
+END;
+/* ------------------------------------------------------------------------------------- */
+MACRO kvnIsPhisRKO(pID);
+  /* AND T_OPEN_CLOSE = CHR(135) */
+  Var rs = kvnRsdRecordset("SELECT T_ACCOUNT FROM DACCOUNT_DBT WHERE T_CHAPTER = 1 \n " +
+                       " AND T_CLIENT = " + pID + " AND T_ACCOUNT LIKE '40802%'");
+
+  Return (rs!=Null);
+END;
+/* ------------------------------------------------------------------------------------- */
+MACRO GetUserField2ForDP_DEP(cF, nm);
+  Var 
+    rs1, ok1, add                                       , 
+    ret = ""                                            , 
+    sql = "SELECT T_CODE, T_USERFIELD2 FROM DDP_DEP_DBT", 
+    sqlWhere                                            , 
+    s = ExecMacroFile("maxlib.mac", "GetFilNum", "T_CODE", cF, nm, sqlWhere);
+                                                                    /* 0       1   2   3 */
+/* 0 - переменная для составления текста, 1 - имя, 2 - USERFIELD2, 3 - sql, Return текст */
+
+  SetParm(0, cF);
+
+  If (s=="")
+    Return Null;
+  ElIf (s == "(true)")
+    Return "";
+  End;
+
+  If (sqlWhere!="") sql = sql + " \nWHERE " + sqlWhere; End;
+
+  Var rs = kvnRsdRecordset(sql);
+  Var ok = (rs!=Null);
+
+  While (ok)
+    If (Index(ret, "'" + rs.Value("T_USERFIELD2") + "'")==0)
+      If (ret != "") ret = ret + ", "; End;
+      ret = ret + "'" + rs.Value("T_USERFIELD2") + "'";
+    End;
+    ok = rs.MoveNext();
+  End;
+
+  rs1 = kvnGetIniStringSmartRecordset("ФИЛИАЛЫ ДОБАВКА");
+  ok1 = (rs1!=Null);
+  While (ok1)
+    add = "'" + rs1.Value("NAME") + "'";
+    If (Index(ret, add)>0)
+      If (ret != "") ret = ret + ", "; End;
+      ret = ret + "'" + rs1.Value("VALUE") + "'";
+    End;
+    ok1 = rs1.MoveNext();
+  End;
+
+  If (Index(ret, ", ")==0)
+    ret = String(" = ",   ret);
+  Else
+    ret = String(" IN (", ret, ")");
+  End;
+
+  SetParm(0, cF);
+  SetParm(1, nm);
+
+  /*println(ret);*/
+  Return ret;
+END;
+/* ------------------------------------------------------------------------------------- */
+Private Var 
+  kvnPeriodBegin: Date, 
+  kvnPeriodEnd  : Date;
+
+Private MACRO kvnPeriodEvent(dlg, cmd, id, key)
+  If (cmd == DLG_INIT)
+
+    dlg.BegDate = kvnPeriodBegin;
+    dlg.EndDate = kvnPeriodEnd;
+
+    UpdateFields(dlg);
+    SetFocus(dlg,"BegDate");
+    Return CM_IGNORE;
+  ElIf (cmd == DLG_SAVE)
+    kvnPeriodBegin = dlg.BegDate;
+    kvnPeriodEnd   = dlg.EndDate;
+  End;
+END;
+
+MACRO kvnGetPeriod(p_BegDate, p_EndDate)
+  Record rPer("PERIOD", "kvn60.lbr") dialog;
+  Var ret;
+
+  kvnPeriodBegin = p_BegDate;
+  kvnPeriodEnd   = p_EndDate;
+
+  If (kvnPeriodBegin == Null) kvnPeriodBegin = {CurDate}; End;
+  If (kvnPeriodEnd   == Null) kvnPeriodEnd   = {CurDate}; End;
+
+  ret = RunDialog(rPer, @kvnPeriodEvent);
+  If (ret) 
+    SetParm(0, kvnPeriodBegin);
+    SetParm(1, kvnPeriodEnd  );
+  End;
+  Return ret;
+END;
+/* ------------------------------------------------------------------------------------- */
+MACRO kvnGetOfficer(pID, IsFirst, pDolgn, OfficerID)
+  Private Var 
+    ret, rs, 
+    sql = "SELECT T_NAME1 || ' ' || T_NAME2 || ' '  || T_NAME3 AS FIO, off.T_POST, off.T_PERSONID \n" +
+          "FROM dofficer_dbt off \n " +
+          "JOIN dpersn_dbt prs ON prs.T_PERSONID = off.T_PERSONID \n" +
+          "WHERE T_PARTYID = " + String(pID);
+  If (IsFirst) 
+    sql = sql + " AND T_ISFIRSTPERSON = 'X'";
+  Else
+    sql = sql + " AND T_ISSECONDPERSON = 'X'"
+  End;
+
+  rs = kvnRsdRecordset(sql);
+  If (rs!=Null)
+    ret = Trim(kvnGetValue(rs.Value(0), ""));
+    SetParm(2, rs.Value(1));
+    SetParm(3, rs.Value(2));
+    If (ret == "") FindNameForPartyID(rs.Value(2), ret); End;
+  Else
+    ret = "";
+    SetParm(2, "");
+    SetParm(3, Null);
+  End;
+  Return ret;
+END;
+/* ------------------------------------------------------------------------------------- */
+MACRO kvnGetFieldFromPersnIdc(pPersonID, pFldName);
+  If (pPersonID==Null) Return ""; End;
+  Private Var rs = kvnRsdRecordset("SELECT " + pFldName + " FROM DPERSNIDC_DBT WHERE T_PERSONID = " + pPersonID);
+  If (rs!=Null)
+    Return kvnGetValue(rs.Value(pFldName), "");
+  End;
+  Return "";
+END;
+/* ------------------------------------------------------------------------------------- */
+MACRO kvnGetFieldFromPersn(pPersonID, pFldName);
+  Private Var rs = kvnRsdRecordset("SELECT " + pFldName + " FROM DPERSN_DBT WHERE T_PERSONID = " + pPersonID);
+  If (rs!=Null)
+    Return kvnGetValue(rs.Value(pFldName), "");
+  End;
+  Return "";
+END;
+/* ------------------------------------------------------------------------------------- */
+MACRO kvnGetPaperKind(pKind) 
+  If ((pKind==Null) Or (pKind=="")) Return ""; End;
+  Private Var rs = kvnRsdRecordset("SELECT T_NAME FROM DPAPRKIND_DBT WHERE T_PAPERKIND = " + pKind);
+
+  If (rs!=Null)
+    Return rs.Value("T_NAME");
+  End;
+  Return "";
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnGetInfo_Release()
+  kvnRunRsdCommand("TRUNCATE TABLE RSL_DOCINF_DBT");
+END;
+/* -------------------------------------------------------------------------------------------- */
+/* Информация о документах через временную таблицу                                              */
+MACRO kvnGetInfo(p_Par1, p_Par2, p_AddWhere, p_Chapter, p_WithMessage, p_Mes, _ShowQuery);
+                /* 0     1       2           3          4              5      6  */
+  Private Var 
+    cnt      = 0          , 
+    sql                   , 
+    sqlWhere = ""         ,
+    sqlArh, sqlDoc, sqlLoc, 
+    ShowQuery             ;
+
+  Private Const ИНН_Банка          : String  = Trim(String(GetEconomCode(GetOurPartyID, "ИННКр")));
+
+  If (_ShowQuery == Null) ShowQuery = False; End;
+  ShowQuery = _ShowQuery; 
+
+  If ((IsSuperUser) And (_ShowQuery)) 
+    GetTrue(ShowQuery, "Показывать запросы kvnGetInfo?"); 
+    SetParm(6, ShowQuery);
+  End;
+
+  Var tName = "RSL_DOCINF_DBT";
+/*      tName = "RSL_DOCINF_TST";*/
+
+  If (p_WithMessage==True) 
+    If (p_Mes == Null) p_Mes = "Подождите, составляется перечень документов"; End;
+    InitProgress(10, p_Mes , p_Mes);
+  End;
+
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Подготовка временной таблицы для приема данных"); TestEvent();
+  End;                                                                             /* 1 */
+  kvnRunRsdCommand("TRUNCATE TABLE " + tName);
+
+  sqlArh   = "\tSELECT * FROM DARHDOC_DBT   \n\t\tWHERE %1% AND T_RESULT_CARRY <> 23\n";
+  sqlDoc   = "\t\tSELECT * FROM DDOCUMENT_DBT \n\t\tWHERE %2% AND T_RESULT_CARRY <> 23\n";
+
+  If (p_AddWhere!=Null)
+    sqlArh = sqlArh + " AND " + p_AddWhere;
+    sqlDoc = sqlDoc + " AND " + p_AddWhere;
+  End;
+
+  If (ValType(p_Par1)==V_DATE)
+    If (p_Par1<{CurDate} ) sqlWhere = sqlWhere + sqlArh; End;
+    If (p_Par2>={CurDate}) 
+      If (p_Par1>{CurDate}) Return; End;
+      If (sqlWhere!="") sqlWhere = sqlWhere + "\t\tUNION \n"; End; 
+      sqlWhere = sqlWhere + sqlDoc; 
+    End;
+
+    sqlLoc = String("\n\t\t%2% AND T_DATE_CARRY BETWEEN '", p_Par1, "' AND '", p_Par2, "' \n\t\t");
+    sqlWhere = StrSubst(sqlWhere, "%1%", sqlLoc);
+  Else
+    sqlWhere = sqlArh + "\t\tUNION \n" + sqlDoc;
+    sqlLoc   = String("T_IAPPLICATIONKIND = ", p_Par1, " AND T_APPLICATIONKEY = ", p_Par2, " AND");
+    sqlWhere = StrSubst(sqlWhere, "%1%", sqlLoc);
+    sqlWhere = StrSubst(sqlWhere, "%2%", sqlLoc);
+  End;
+
+  sqlLoc = "INSERT INTO " + tName + " (T_DOCAUTOKEY, T_DOCAPPLICATIONKIND, T_DOCAPPLICATIONKEY, \n" +
+           "T_CONN_KIND, T_CONN_KEY, T_CHAPTER, T_ACCOUNT_PAYER, T_ACCOUNT_RECEIVER, T_FIID, T_AMOUNT, \n" +
+           "T_DATE, T_NUMBER_PACK, T_NUMB_DOCUMENT, T_SHIFR_OPER, T_GROUND, T_OPER, T_DEPARTMENT, T_RESULT_CARRY, T_SUM) \n " +
+      "SELECT doc.T_AUTOKEY, doc.T_IAPPLICATIONKIND, doc.T_APPLICATIONKEY, \n" +
+           "doc.T_CONNAPPKIND, doc.T_CONNAPPKEY, \n" +
+           "doc.T_CHAPTER, doc.T_ACCOUNT_PAYER, doc.T_ACCOUNT_RECEIVER, doc.T_CODE_CURRENCY, doc.T_SUM, \n " +
+           "doc.T_DATE_CARRY, T_NUMBER_PACK, T_NUMB_DOCUMENT, T_SHIFR_OPER, T_GROUND, T_OPER, T_DEPARTMENT, T_RESULT_CARRY, T_SUM \n" +
+           "FROM ( \n" + sqlWhere + "\n) doc;";
+
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Разбор таблицы проводок"); TestEvent();
+  End;                                                                       /* 2 */
+
+  If (Index(sqlLoc, "%2%")>0)
+    If (p_Chapter == Null)
+      sql = StrSubst(sqlLoc, "%2%", "T_CHAPTER = 1");
+
+      If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+      kvnRunRsdCommand(sql);
+
+      sql = StrSubst(sqlLoc, "%2%", "T_CHAPTER = 3");
+      If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+      kvnRunRsdCommand(sql);
+
+      sql = StrSubst(sqlLoc, "%2%", "T_CHAPTER = 5");
+      If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+      kvnRunRsdCommand(sql);
+    Else
+      sql = StrSubst(sqlLoc, "%2%", "T_CHAPTER = " + p_Chapter);
+      If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+      kvnRunRsdCommand(sql);
+    End;
+  Else
+    If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+    kvnRunRsdCommand(sql);
+  End;
+
+  /* Притянем мультивалютку и платежди РКО */
+   
+  sql = "  UPDATE " + tName + " ins SET (T_PAYERACCOUNT, T_RECEIVERACCOUNT, T_CARRYID, T_GROUND) =   \n" +
+        "  ( SELECT mc.t_account_from, mc.t_account_to, mc.t_carryid, mc.t_ground           \n" +
+        "    FROM " + tName + " doc                                                         \n" +
+        "    JOIN dmultycar_dbt mc                                                          \n" +
+        "    ON mc.t_iapplicationkind=15 AND mc.t_applicationkey = doc.t_conn_key           \n" +
+        "    WHERE ins.T_DOCAUTOKEY = T_DOCAUTOKEY                                          \n" +
+        "  ) WHERE ins.t_conn_kind = 15                                                       ";
+  If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+  kvnRunRsdCommand(sql);
+
+  sql = "  UPDATE " + tName + " ins SET T_PAYMENTID =  \n" +
+        "  (SELECT link.T_PAYMENTID                    \n" +
+        "  FROM " + tName + " doc,                     \n" +
+        "          DPMDOCS_DBT link                    \n" +
+        "    WHERE doc.T_DOCAUTOKEY = ins.T_DOCAUTOKEY  AND \n" +
+        "    link.T_LINKKINDID = 1 AND                 \n" +
+        "    link.T_APPLICATIONKIND(+) = doc.T_DOCAPPLICATIONKIND AND \n" +
+        "    link.T_APPLICATIONKEY(+)  = doc.T_DOCAPPLICATIONKEY)  \n"; 
+/*
+        "    link.T_APPLICATIONKEY(+)  = doc.T_DOCAPPLICATIONKEY  AND \n" +
+        "    link.T_AMOUNT(+)          = doc.T_AMOUNT )           \n";
+*/        
+  If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+  kvnRunRsdCommand(sql);
+
+
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Поиск платежей РКО и мультивалютных документов"); TestEvent();
+  End;                                                                       /* 3 */
+
+  sql = "UPDATE " + tName + " ins SET                                                   \n" +
+        "  (T_CONN_PAC, T_PAYERNAME, T_PAYERINN, T_PAYERINN_KPP,                        \n" +
+        "   T_CONN_RAC, T_RECEIVERNAME, T_RECEIVERINN, T_RECEIVERINN_KPP, T_PAYMENTID,  \n" +
+        "   T_FIID, T_AMOUNT, T_DATE, T_CONN_NUMBER_PACK, T_CONN_NUMB_DOCUMENT,         \n" +
+        "   T_CONN_SHIFR_OPER, T_CONN_GROUND, T_BTTTICODE, T_PAYDATE, T_PRIORITY,       \n" +
+        "   T_PAYERBANKNAME, T_RECEIVERBANKNAME, T_PAYERCORRACC, T_RECEIVERCORRACC,     \n" +
+        "   T_PAYERBANKCODE, T_RECEIVERBANKCODE, T_PAYERMESBANKID, T_RECEIVERMESBANKID, \n" +
+        "   T_DEBETCREDIT, T_DOCKIND, T_BANKCODE, T_ISSENDER, T_PROPSTATUS) =          \n" +
+        "( SELECT                                                                       \n" +
+        "    rsl_tools.MyDecode(paym.T_PAYERACCOUNT), rmprop.T_PAYERNAME,               \n" +
+        "    rsl_tools.MyDecode(rsl_tools.getShortINN(rmprop.T_PAYERINN)),              \n" +
+        "    rsl_tools.MyDecode(rmprop.T_PAYERINN),                                     \n" +
+        "    paym.T_RECEIVERACCOUNT, rmprop.T_RECEIVERNAME,                             \n" +
+        "    rsl_tools.MyDecode(rsl_tools.getShortINN(rmprop.T_RECEIVERINN)),           \n" +
+        "    rsl_tools.MyDecode(rmprop.T_RECEIVERINN),                                  \n" +
+        "    paym.T_PAYMENTID,                                                          \n" +
+        "    NVL(paym.T_FIID, doc.T_FIID),                                              \n" +
+        "    NVL(paym.T_AMOUNT, doc.T_AMOUNT),                                          \n" +
+        "    NVL(rmprop.T_DATE, doc.T_DATE),                                            \n" +
+        "    NVL(paym.T_NUMBERPACK, doc.T_NUMBER_PACK),                                 \n" +
+        "    doc.T_NUMB_DOCUMENT,                                                       \n" +
+        "    rmprop.T_SHIFROPER,                                                        \n" +
+        "    NVL(rmprop.T_GROUND, doc.T_GROUND),                                        \n" +
+        "    rsl_tools.MYDECODE(rmprop.T_BTTTICODE),                                    \n" +
+        "    rmprop.T_PAYDATE,                                                          \n" +
+        "    rmprop.T_PRIORITY,                                                         \n" +
+        "    rsl_tools.MyDecode(rmprop.T_PAYERBANKNAME),                                \n" +
+        "    rsl_tools.MyDecode(rmprop.T_RECEIVERBANKNAME),                             \n" +
+        "    rsl_tools.MyDecode(rmprop.T_PAYERCORRACCNOSTRO),                           \n" +
+        "    rsl_tools.MyDecode(rmprop.T_RECEIVERCORRACCNOSTRO),                        \n" +
+        "    p_code.T_CODE,                                                             \n" +
+        "    r_code.T_CODE,                                                             \n" +
+        "    rsl_tools.MyDecode(paym.T_PAYERMESBANKID),                                 \n" +
+        "    rsl_tools.MyDecode(paym.T_RECEIVERMESBANKID),                              \n" +
+        "    rsl_tools.MyDecode(pmprop.T_DEBETCREDIT),                                  \n" +
+        "    rsl_tools.MyDecode(paym.T_DOCKIND),                                        \n" +
+        "    rsl_tools.MyDecode(pmprop.T_BANKCODE),                                     \n" +
+        "    rsl_tools.MyDecode(pmprop.T_ISSENDER),                                     \n" +
+        "    rsl_tools.MyDecode(pmprop.T_PROPSTATUS)                                    \n" +
+        "  FROM " + tName + " doc, DPMPAYM_DBT paym, DPMRMPROP_DBT rmprop,              \n" +
+        "                          DPMPROP_DBT   pmprop,                                \n" +
+        "                          DPARTCODE_DBT r_code,                                \n" +
+        "                          DPARTCODE_DBT p_code                                 \n" +
+        "  WHERE               ins.T_CHAPTER = 1 AND ins.T_PAYMENTID IS NOT NULL        \n" +
+        "                      AND  doc.T_DOCAUTOKEY = ins.T_DOCAUTOKEY                 \n" +
+        "                      AND  (paym.T_PAYMENTID(+) = doc.T_PAYMENTID)             \n" +
+        "                      AND  (rmprop.T_PAYMENTID(+) = doc.T_PAYMENTID)           \n" +
+        "                      AND  (pmprop.T_PAYMENTID(+) = doc.T_PAYMENTID)           \n" +
+        "   AND  (r_code.T_PARTYID(+) = paym.T_RECEIVERBANKID AND r_code.T_CODEKIND(+) = 3) \n" +
+        "   AND  (p_code.T_PARTYID(+) = paym.T_PAYERBANKID AND p_code.T_CODEKIND(+) = 3)) "; 
+
+/*
+        "  JOIN DPMPAYM_DBT paym ON (paym.T_PAYMENTID   = doc.T_PAYMENTID)              \n" +
+        "  LEFT OUTER JOIN DPMRMPROP_DBT rmprop ON (rmprop.T_PAYMENTID = doc.T_PAYMENTID) \n" +
+        "  LEFT OUTER JOIN DPMPROP_DBT   pmprop ON (pmprop.T_PAYMENTID = doc.T_PAYMENTID) \n" +
+        "  LEFT OUTER JOIN DPARTCODE_DBT r_code                                         \n" +
+        "    ON (r_code.T_PARTYID = T_RECEIVERBANKID AND                                \n" +
+        "       (r_code.T_CODEKIND IS NULL OR r_code.T_CODEKIND = 3))                   \n" +
+        "  LEFT OUTER JOIN DPARTCODE_DBT p_code                                         \n" +
+        "    ON (p_code.T_PARTYID = T_PAYERBANKID AND (p_code.T_CODEKIND IS NULL OR p_code.T_CODEKIND = 3))    \n" +
+        "  WHERE ins.T_DOCAUTOKEY = T_DOCAUTOKEY AND T_PAYMENTID IS NOT NULL            \n" +
+        ") WHERE T_CHAPTER = 1 AND ins.T_PAYMENTID IS NOT NULL";
+*/
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Разбор платежей РКО"); TestEvent();
+  End;                                                                       /* 4 */
+  If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+  kvnRunRsdCommand(sql);
+
+  sql = "BEGIN \n" +
+        "  UPDATE " + tName + " ins SET T_PAYERACCOUNT    = T_CONN_PAC WHERE T_PAYERACCOUNT    IS NULL; \n" +
+        "  UPDATE " + tName + " ins SET T_RECEIVERACCOUNT = T_CONN_RAC WHERE T_RECEIVERACCOUNT IS NULL; \n" +
+        "END;";
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Обновление данных получателей по счетам покрытия"); TestEvent();
+  End;                                                                       /* 5 */
+  If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+  kvnRunRsdCommand(sql);
+
+  /* Добьем остатки по проводкам */
+  sql = "UPDATE " + tName + " ins SET                                                   \n" +
+        "  (T_CONN_PAC, T_PN, T_PINN, T_PINNKPP,                                        \n" +
+        "   T_CONN_RAC, T_RN, T_RINN, T_RINNKPP)                          =             \n" +
+        "(SELECT                                                                        \n" +
+        "  doc.T_ACCOUNT_PAYER, p_pt.t_name,                                            \n" +
+        "  rsl_tools.getShortINN(p_pc.t_code), p_pc.t_code,                             \n" +
+        "  doc.T_ACCOUNT_RECEIVER, r_pt.t_name,                                         \n" +
+        "  rsl_tools.getShortINN(r_pc.t_code), r_pc.t_code                              \n" +
+        "FROM " + tName + " doc                                                         \n" +
+        "  JOIN DACCOUNT_DBT p_ac ON                                                    \n" +
+         "  p_ac.T_CHAPTER = doc.T_CHAPTER AND p_ac.T_ACCOUNT = doc.T_ACCOUNT_PAYER      \n" +
+        "  LEFT OUTER JOIN dparty_dbt p_pt ON                                           \n" +
+         "  p_pt.t_partyID = DECODE(p_ac.t_client,0,rsb_kernel.GetSelfId,p_ac.t_client)  \n" +
+        "  JOIN daccount_dbt r_ac ON                                                    \n" +
+         "  r_ac.t_chapter = doc.T_CHAPTER AND r_ac.t_account = doc.T_ACCOUNT_RECEIVER   \n" +
+        "  LEFT OUTER JOIN dparty_dbt r_pt ON                                           \n" +
+         "  r_pt.t_partyID = DECODE(r_ac.t_client,0,rsb_kernel.GetSelfId,r_ac.t_client)  \n" +
+        "  LEFT OUTER JOIN DPARTCODE_DBT p_pc ON                                        \n" +
+         "  p_pc.T_PARTYID = p_pt.T_PARTYID AND p_pc.T_CODEKIND = 16                     \n" +
+        "  LEFT OUTER JOIN DPARTCODE_DBT r_pc ON                                        \n" +
+         "  r_pc.T_PARTYID = r_pt.T_PARTYID AND r_pc.T_CODEKIND = 16                     \n" +
+        "WHERE ins.T_DOCAUTOKEY = T_DOCAUTOKEY                                          \n" +
+        ")";
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Анализ проводок с ненайденной первичкой"); TestEvent();
+  End;                                                                       /* 6 */
+  If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+  kvnRunRsdCommand(sql);
+
+  sql = "BEGIN \n " +
+        "  UPDATE " + tName + " ins SET T_PAYERACCOUNT = T_CONN_PAC WHERE T_PAYERACCOUNT IS NULL; \n" +
+        "  UPDATE " + tName + " ins SET T_RECEIVERACCOUNT = T_CONN_RAC WHERE T_RECEIVERACCOUNT IS NULL; \n" +
+        "  UPDATE " + tName + " ins SET    \n" +
+        "    T_PAYERNAME    = T_PN,        \n" +
+        "    T_PAYERINN     = T_PINN,      \n" +
+        "    T_PAYERINN_KPP = T_PINNKPP    \n" +
+        "    WHERE T_PAYERNAME IS NULL AND T_PN IS NOT NULL; \n" +
+        "  UPDATE " + tName + " ins SET    \n" +
+        "    T_RECEIVERNAME    = T_RN,     \n" +
+        "    T_RECEIVERINN     = T_RINN,   \n" +
+        "    T_RECEIVERINN_KPP = T_RINNKPP \n" +
+        "    WHERE T_RECEIVERNAME IS NULL AND T_RN IS NOT NULL; \n" +
+        "  UPDATE " + tName + " ins SET T_PAYERACCOUNT = T_CONN_PAC WHERE T_PAYERACCOUNT IS NULL; \n" +
+        "  UPDATE " + tName + " ins SET T_RECEIVERACCOUNT = T_CONN_RAC WHERE T_RECEIVERACCOUNT IS NULL; \n" +
+        "  UPDATE " + tName + " ins SET    \n" +
+        "    T_NUMBER_PACK   = NVL(T_CONN_NUMBER_PACK,   T_NUMBER_PACK  ), \n" +
+        "    T_NUMB_DOCUMENT = NVL(T_CONN_NUMB_DOCUMENT, T_NUMB_DOCUMENT), \n" +
+        "    T_SHIFR_OPER    = rsl_tools.MyDecode(NVL(T_CONN_SHIFR_OPER,    T_SHIFR_OPER   )), \n" +
+        "    T_GROUND        = NVL(T_CONN_GROUND,        T_GROUND       ); \n" + 
+        "END;";
+
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Выверка счетов плательщиков и получателей"); TestEvent();
+  End;                                                                       /* 7 */
+  If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+  kvnRunRsdCommand(sql);
+
+  sql = "BEGIN \n" +
+        "  UPDATE " + tName + " SET T_RECEIVERINN = '" + ИНН_Банка + "'\n " +
+        "  WHERE T_DOCAUTOKEY IN \n" +
+        "    ( SELECT T_DOCAUTOKEY FROM " + tName + " doc \n " +
+        "      JOIN DACCOUNT_DBT acc ON acc.T_ACCOUNT = doc.T_RECEIVERACCOUNT \n" +
+        "      WHERE T_RECEIVERINN IS NULL AND acc.T_CLIENT = 0 AND T_PAYMENTID IS NULL \n" +
+        "    ); \n" +
+        "  UPDATE " + tName + " SET T_PAYERINN = '" + ИНН_Банка + "'\n " +
+        "    WHERE T_DOCAUTOKEY IN \n" +
+        "    ( SELECT T_DOCAUTOKEY FROM " + tName + " doc \n " +
+        "      JOIN DACCOUNT_DBT acc ON acc.T_ACCOUNT = doc.T_PAYERACCOUNT \n" +
+        "      WHERE T_RECEIVERINN IS NULL AND acc.T_CLIENT = 0 AND T_PAYMENTID IS NULL \n" +
+        "    ); \n" +
+        " UPDATE RSL_DOCINF_DBT SET T_RECEIVERBANKCODE = T_BANKCODE \n" +
+        "   WHERE T_PAYMENTID IS NOT NULL AND T_PAYERBANKCODE IS NULL AND T_RECEIVERBANKCODE IS NULL \n" +
+        "   AND T_PROPSTATUS!=0 AND T_ISSENDER != 'X'; \n" +
+        " UPDATE RSL_DOCINF_DBT SET T_PAYERBANKCODE = T_BANKCODE    \n" +
+        "   WHERE T_PAYMENTID IS NOT NULL AND T_PAYERBANKCODE IS NULL AND T_RECEIVERBANKCODE IS NULL \n" +
+        "   AND T_PROPSTATUS!=0 AND T_ISSENDER = 'X';  \n " +
+        "END;";
+
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Подстановка ИНН и БИК"); TestEvent();
+  End;                                                                       /* 8 */
+  If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+  kvnRunRsdCommand(sql);
+
+/*
+  sql = "BEGIN \n" +
+        "END;";
+  If (p_WithMessage) 
+    UseProgress(cnt=cnt+1); Message("Подстановка БИК по межбанковским док-там"); TestEvent();
+  End;                                                                       /* 9 */
+  If ((ShowQuery) And (IsSuperUser)) kvnViewFile(sql); End;
+  kvnRunRsdCommand(sql);
+*/
+
+  If (p_WithMessage) RemProgress(); End; 
+
+  Return tName;
+
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnGetInfo_SetDocKind();
+  Var sql = "UPDATE RSL_DOCINF_DBT doc SET (T_DOCKIND, T_AUTOINC) = \n" +
+            "(SELECT op.T_DOCKIND, TO_NUMBER(op.T_DOCUMENTID) \n" +
+            " FROM DOPRDOCS_DBT dc, DOPROPER_DBT op \n" +
+            " WHERE dc.T_DOCKIND = 1 AND \n" +
+            "   dc.T_DOCUMENTID = LPAD(TO_CHAR(T_DOCAPPLICATIONKIND),5,'0') || T_DOCAPPLICATIONKEY \n" +
+            " AND op.T_ID_OPERATION = dc.T_ID_OPERATION \n" +
+            ")";
+  kvnRunRsdCommand(sql);
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO _ПолучитьИнформациюПоДокументу(doc, doc_inf) 
+  Var sql = "SELECT /*+FIRST_ROWS */ \n " + 
+         "  rsl_tools.MYDECODE(rsl_tools.MyNVL_OrChapter(paym.T_PAYERACCOUNT, doc.T_ACCOUNT_PAYER, doc.T_CHAPTER)) PayerAccount,  \n" +
+         "  rsl_tools.MyNVL_OrChapter(rmprop.T_PAYERNAME, p_acc_pt.t_name, doc.T_CHAPTER)          PayerName       , \n" +
+         "  rsl_tools.MYDECODE(rsl_tools.getShortINN(rmprop.T_PAYERINN)) PayerINN        , \n" +
+         "  rsl_tools.MYDECODE(rmprop.T_PAYERINN)                        PayerINN_KPP    , \n" +
+         "  rsl_tools.MYDECODE(rmprop.T_PAYERBANKNAME)                   PayerBankName   , \n" +
+         "  rsl_tools.MYDECODE(rmprop.T_PAYERCORRACCNOSTRO)              PayerCorrAcc    , \n" +
+         "  p_code.T_CODE                                                PayerBankCode   , \n" +
+         "  rsl_tools.MYDECODE(NVL(paym.T_RECEIVERACCOUNT, doc.T_ACCOUNT_RECEIVER)) ReceiverAccount, \n" +
+         "  rmprop.T_RECEIVERNAME                                        ReceiverName    , \n" +
+         "  rsl_tools.MYDECODE(rsl_tools.getShortINN(rmprop.T_RECEIVERINN)) ReceiverINN  , \n" +
+         "  rsl_tools.MYDECODE(rmprop.T_RECEIVERINN)                     ReceiverINN_KPP , \n" +
+         "  rsl_tools.MYDECODE(rmprop.T_RECEIVERBANKNAME)                ReceiverBankName, \n" + 
+         "  rsl_tools.MYDECODE(rmprop.T_RECEIVERCORRACCNOSTRO)           ReceiverCorrAcc , \n" + 
+         "  r_code.T_CODE                                                ReceiverBankCode, \n" + 
+         "  NVL(paym.T_PAYMENTID, 0)                                     PaymentID       , \n" +
+         "  NVL(paym.T_FIID, 0)                                          FIID            , \n" + 
+         "  NVL(paym.T_AMOUNT, doc.T_SUM)                                Amount          , \n" +    
+         "  NVL(rmprop.T_DATE, doc.T_DATE_CARRY)                         DatePm          , \n" + 
+         "  rmprop.T_PAYDATE                                             PayDate         , \n" + 
+         "  NVL(rmprop.T_PRIORITY, '0')                                  Priority        , \n" + 
+         "  NVL(paym.T_NUMBERPACK, doc.T_NUMBER_PACK)                    Number_Pack     , \n" +
+         "  NVL(rmprop.T_NUMBER, doc.T_NUMB_DOCUMENT)                    Numb_Document   , \n" +
+         "  NVL(rmprop.T_SHIFROPER, doc.T_SHIFR_OPER)                    Shifr_Oper      , \n" + 
+         "  NVL(rmprop.T_GROUND, doc.T_GROUND)                           Ground          , \n" + 
+         "  rsl_tools.MYDECODE(rmprop.T_BTTTICODE)                       BtttiCode       , \n" +
+         "  paym.T_PAYAMOUNT                                                             , \n" + 
+         "  paym.T_DOCKIND \n FROM\n" + 
+         "  ( SELECT * FROM DARHDOC_DBT \n" +
+         "    WHERE T_IAPPLICATIONKIND = "+doc.iApplicationKind+" AND T_APPLICATIONKEY = '"+doc.ApplicationKey+"' AND T_RESULT_CARRY <> 23 \n    " +
+         "    UNION \n" +
+         "    SELECT * FROM DDOCUMENT_DBT \n" +
+         "    WHERE T_IAPPLICATIONKIND = "+doc.iApplicationKind+" AND T_APPLICATIONKEY = '"+doc.ApplicationKey+"' AND T_RESULT_CARRY <> 23 \n    " +
+         ") doc \n" +
+         "LEFT OUTER JOIN DPMDOCS_DBT link \n" +
+         "ON (link.T_LINKKINDID = 1 AND link.T_APPLICATIONKIND = doc.T_IAPPLICATIONKIND AND link.T_APPLICATIONKEY = doc.T_APPLICATIONKEY) \n" +
+         "LEFT OUTER JOIN DPMPAYM_DBT   paym   ON (paym.T_PAYMENTID   = link.T_PAYMENTID) \n" +
+         "LEFT OUTER JOIN DPMRMPROP_DBT rmprop ON (rmprop.T_PAYMENTID = link.T_PAYMENTID) \n" +
+         "LEFT OUTER JOIN DPARTCODE_DBT r_code ON \n" +
+         "   (r_code.T_PARTYID = T_RECEIVERBANKID AND (r_code.T_CODEKIND IS NULL OR r_code.T_CODEKIND = 3)) \n" +
+         " LEFT OUTER JOIN DPARTCODE_DBT p_code ON  \n" +
+         "   (p_code.T_PARTYID = T_PAYERBANKID AND (p_code.T_CODEKIND IS NULL OR p_code.T_CODEKIND = 3)) \n" +
+         "LEFT OUTER JOIN dopergrup_dbt grp ON doc.t_oper = grp.t_oper \n"
+         "LEFT OUTER JOIN daccount_dbt p_acc ON p_acc.t_chapter = doc.t_chapter AND p_acc.t_account = doc.T_ACCOUNT_RECEIVER \n" +
+         "JOIN dparty_dbt p_acc_pt ON  p_acc_pt.t_partyID = DECODE(p_acc.t_client,0," + GetOurPartyID() + ",p_acc.t_client) ";
+
+/*  println(sql); exit;  return;*/
+  Private Var 
+    i  = 0, j,
+
+    rs = kvnRsdRecordset(sql/*, doc.iApplicationKind, doc.ApplicationKey, 
+                              doc.iApplicationKind, doc.ApplicationKey*/);
+
+  ClearRecord(doc_inf);
+  If (rs!=Null)
+    While (i<Rs.FldCount)
+      j=FldIndex(doc_inf,rs.FLD(i).name);
+      if (j>=0) 
+        If (ValType(doc_inf(j))==V_DATE)
+        DtTmSplit( rs.Value(i),doc_inf(j));
+          if(rs.Value(i) == NULL)
+             rs.Value(i) = date(0,0,0);
+          end;
+      /*    doc_inf(j)=Date(rs.Value(i));*/
+        Else
+          doc_inf(j)=rs.Value(i);
+        End;
+      end;
+      i = i + 1;
+      doc_inf.Date = rs.Value("DatePm");
+    End;
+  End;
+
+  If ((doc_inf.PayerName == "") Or (doc_inf.PayerINN == ""))
+    rs = kvnRsdRecordset(
+           "SELECT adr.*, rsl_tools.getShortINN(pc.T_CODE) Inn, pc.T_CODE InnKpp, pt.T_NAME NAME\n " +
+           "FROM daccount_dbt acc \n" +
+           "JOIN dparty_dbt pt ON t_partyID = DECODE(acc.t_client,0," + GetOurPartyID() + ",acc.t_client) "
+           "LEFT OUTER JOIN DPARTCODE_DBT pc ON  pc.T_PARTYID = pt.T_PARTYID AND pc.T_CODEKIND = 16 \n " +
+           "LEFT OUTER JOIN DADRESS_DBT adr ON adr.T_PARTYID = pt.T_PARTYID \n"
+           "WHERE acc.t_account = '"+doc.Account_Payer+"'");
+    If (rs!=Null)
+      //println(">>", doc.Account_Payer);
+//      doc_inf.PayerName    = rs.Value("NAME");
+      doc_inf.PayerINN     = rs.Value("Inn");
+      doc_inf.PayerINN_KPP = rs.Value("InnKpp");
+    End;
+  End;
+  Return True;
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnGetDepCode(DepName)
+  Var rs = kvnRsdRecordset("SELECT T_CODE FROM DDP_DEP_DBT WHERE T_NAME = " + kvnValToSQL(DepName));
+  If (rs!=Null) Return rs.Value(0); End;
+  Return 0;
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnGetDepComment(DepCode)
+  Var rs = kvnRsdRecordset("SELECT T_COMMENT FROM DDP_DEP_DBT WHERE T_CODE = " + kvnValToSQL(DepCode));
+  If (rs!=Null) Return rs.Value(0); End;
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnGetDepName(DepCode)
+  Var rs = kvnRsdRecordset("SELECT T_NAME FROM DDP_DEP_DBT WHERE T_CODE = " + kvnValToSQL(DepCode));
+  If (rs!=Null) Return rs.Value(0); End;
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnGetAccName (Currency, Chapter, Account)
+  Var sql, add, rs;
+
+  sql = "SELECT T_NAMEACCOUNT FROM "; 
+  If (Currency == 0)
+    sql = sql + "DACCOUNT_DBT";
+    add = "";
+  Else
+    sql = sql + "DACCOUNT$_DBT";
+    add = " AND T_CURRENCY = " + kvnValToSQL(Currency);
+  End;
+
+  sql = sql + " WHERE T_CHAPTER = " + kvnValToSQL(Chapter) +
+              "   AND T_ACCOUNT = " + kvnValToSQL(Account) + add;
+  rs = kvnRsdRecordset(sql);
+  If (rs!=Null) Return rs.Value(0); End;
+  Return "Нет"
+END;
+/* -------------------------------------------------------------------------------------------- */
+/* *** */
+CLASS kvnTCladov;                    /* Класс определения документа кладовой                     */
+  Private Var 
+    acc     = TbFILE("account.dbt",  "R", 0) , /* 0: Chapter, Account                                 */
+    acv     = TbFILE("account$.dbt", "R", 0) , /* 0: Chapter, Account, Code_Currency                  */
+    vAcPayer                             , 
+    vAcReceiver                          , 
+    rDoc    = TbFile("document.dbt", "R", 0), 
+    vDoc    = TbFile("documnt$.dbt", "R", 0), 
+    KassDep = Int(GetIniString("KassDep", "komiss.ini"));
+
+  Private Var vDEBUG = False;
+  Var kvnType = 0; /* Old */
+
+  MACRO kvnIIF(pCond, pTrue, pFalse)                    /* Стандартная функция IIF              */
+    If (pCond)
+      Return (pTrue);
+    Else
+      Return (pFalse);
+    End;
+  END;
+
+  MACRO kvnArgEQ(pArgCmp); /* Сравниваем первый аргумент со всеми последующими */
+    Var i = 1, 
+        v = Null;
+
+    While (GetParm(i, v)) 
+      If ( v == pArgCmp ) Return True; End;
+      i = i + 1;
+    End;
+    Return False;
+  END;
+
+  MACRO kvnPrintln()
+    Private Var i = 0; 
+    Private Var v;
+
+    If (( {Oper} != 23 ) And ( {Oper} != 27 )) return False; End;
+    While (GetParm(i, v))
+      Print(v);
+      i = i + 1;
+    End;
+    println;
+    Return True;
+  END;
+
+  MACRO kvnGetFileName(pVal) : String; /* Вычленяем имя файла из полного имени                     */
+    Var nn   = FileName(pVal), 
+        i    = StrLen(nn) - 4, 
+        Ch   = "", 
+        vRes = "";
+
+    While ((i>0) And (Ch!=".") And (Ch!="\\"))
+      vRes = Ch + vRes;
+      Ch = SubStr(nn, i, 1);
+      i = i - 1;
+    End;
+    Return Trim(StrLwr(vRes));
+  END; /* GetName */
+
+  MACRO GetTypeCalc;
+    array kvnMenu;
+    kvnMenu[0] = "Старый метод отбора документов кладовой (объектный)   ";
+    kvnMenu[1] = "Новый метод отбора документов кладовой (по виду счета)";
+    If (kvnArgEQ({Oper}, 23, 27, 455, 1073))
+      If (Menu(kvnMenu) == 1) kvnType = 1; End;
+    End;
+    Return kvnType;
+  END;
+
+  Private MACRO IsCladov(vAcc);           /* CLASS kvnTCladov. Проверка руб. счета на признак кладов. */
+
+    If ( vDEBUG ) kvnPrintln("Testing For Account ", vAcc); End;
+
+    If (SubStr(Trim(vAcc), 1, 5) != "20202") 
+      If ( vDEBUG ) kvnPrintln(vAcc, " is not 20202"); End;
+      Return False; 
+    Else
+      If ( vDEBUG ) kvnPrintln(vAcc, " is 20202"); End;
+    End;
+
+    acc.rec.Chapter = 1;
+    acc.rec.Account = vAcc;
+    If (Not acc.GetEQ)  
+      If ( vDEBUG ) kvnPrintln("Not Found Account ", vAcc); End;
+      Return False; 
+    End;
+/*    If ( acc.rec.Balance       == "2020800" ) Return False; End;*/
+    If (acc.rec.Department != KassDep)
+      If ( vDEBUG ) kvnPrintln(vAcc, ": Department = ", acc.rec.Department); End;
+      Return False; 
+    End;
+
+    If (Index(acc.rec.Type_Account, "А") > 0) 
+      If ( vDEBUG ) kvnPrintln(vAcc, " Is Clad"); End;
+      Return True;  
+    End;
+
+    If ( vDEBUG ) kvnPrintln(vAcc, ": Type_Account = ", acc.rec.Type_Account); End;
+    Return False;
+  END;
+
+  Private MACRO IsVCladov(vAcc);       /* CLASS kvnTCladov. Проверка вал. счета на признак кладов. */
+    If ( vDEBUG ) kvnPrintln("Testing For Account ", vAcc); End;
+
+    acv.rec.Chapter       = 1;        
+    acv.rec.Account       = vAcc;
+    acv.rec.Code_Currency = 0;
+    If ((Not acv.GetGE) Or (acv.rec.Account != vAcc)) 
+      If ( vDEBUG ) kvnPrintln("Not Found Account ", vAcc); End;
+      Return False; 
+    End;
+
+/*    acc.rec.Chapter       = 1;
+    acc.rec.Account       = acv.rec.Connect_Account;
+    If (Not acc.GetEQ)  
+      If ( vDEBUG ) kvnPrintln("Not Found Cover Account ", vAcc); End;
+      Return False; 
+    End; */
+
+    If ( acv.rec.Department    != KassDep         )          
+      If ( vDEBUG ) kvnPrintln(vAcc, ": Department = ", acv.rec.Department); End;
+      Return False; 
+    End;
+
+    If (Index(acv.rec.Type_Account, "А")>0 )          
+      If ( vDEBUG ) kvnPrintln(vAcc, " Is Clad"); End;     
+      Return True;  
+    End;
+    If ( vDEBUG ) kvnPrintln(vAcc, ": Type_Account = ", acv.rec.Type_Account); End;
+    Return False;
+  END;
+  
+  MACRO DocIsCladov(doc, pNumForDebug); /* CLASS kvnTCladov. Проверка проводки   */                              
+    Var IsVal = kvnIif((Index(kvnGetFileName(doc), "$")>0), True, False);
+    Var f1, f2;
+    Message(IsVal);
+
+    vDEBUG = kvnIIf(( doc.rec.AutoKey == pNumForDebug ), True, False);
+    If ( vDEBUG ) kvnPrintln("DEBUG Is ON"); End;
+ 
+    vAcPayer    = doc.rec.Account_Payer;
+    vAcReceiver = doc.rec.Account_Receiver;
+    If (not IsVal)
+      f1 = IsCladov (vAcPayer);
+      f2 = IsCladov (vAcReceiver );
+      Return ((f1) Or (f2));
+    End;
+    f1 = IsVCladov (vAcPayer);
+    f2 = IsVCladov (vAcReceiver );
+    Return ((f1) Or (f2));
+  END; 
+
+  MACRO DocIsCladovFILE(doc)
+    If (Index(kvnGetFileName(doc), "$") == 0 )
+      copy(rDoc, doc);
+      Return DocIsCladov(rDoc);
+    End;
+    copy(vDoc, doc);
+    Return DocIsCladov(vDoc);
+  END;
+
+END;
+
+
+macro kvnCurrRate(Code:String,Date:Date):Double;  /* Получить курс по валюте за дату */
+var RetRate:Double;
+record vRate(ratedef);                            /* курс валюты */
+   If (ПолучитьКурс(vRate, "810",Code,3)!=0) 
+      return -1; 
+   End;                                           /* Получили структуру ФИ */
+   If (ПолучитьЗначениеКурса(vRate, Date )!=0) 
+      return -2; 
+   End;                                           /* Получили курс на дату */
+   ПолучитьСтрокуЗначенияКурса(vRate,2,RetRate);  /* Вывели в удобном виде */
+   return retRate;
+end;
+
+/*Вызов информационного сообщения*/
+/* -------------------------------------------------------------------------------------------- */
+private var infobox_userFunc,infobox_MsgText, infobox_ret;
+/* -------------------------------------------------------------------------------------------- */
+PRIVATE MACRO EvInfoBox(dlg,cmd,id,key);
+   if (cmd == DLG_INIT)
+      message(infobox_MsgText);
+      testevent(0);
+      infobox_ret = ExecMacro2(infobox_userFunc);
+      Return CM_CANCEL;
+   end; 
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO OpenInfoBox(InfoText,p_userFunc, p_MessageText);
+  private record info_box("infobox","kvn60.lbr") dialog;
+  private record info_str("infostr","kvn60.lbr") dialog;
+
+  Var info;
+
+  infobox_userFunc = p_userFunc;
+  If (p_MessageText!=null)
+    infobox_MsgText=p_MessageText;
+  End;
+/*
+  If (StrLen(InfoText)>60)
+    info_box.infoText = InfoText;
+    RunDialog(info_box,@EvInfoBox);
+  Else
+    info_str.infoText = InfoText;
+    RunDialog(info_str,@EvInfoBox);
+  End;
+*/
+  If (StrLen(InfoText)>60)
+    info = info_box;
+  Else
+    info = info_str;
+  End;
+
+  info.infoText = InfoText;
+  RunDialog(info,@EvInfoBox);
+
+  Return infobox_ret;
+END;
+/*Конец блока вызова информационного сообщения*/
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnSelectFilial(p_DepName, p_DepComment, p_Left, p_Top, p_Mesage, p_Head);
+  Private Var 
+    rs       = kvnRsdRecordset("SELECT * FROM DDP_DEP_DBT WHERE T_CLOSEDATE = '01.01.0001' ORDER BY T_CODE"), 
+    ok       = (rs!=Null), 
+    aFil     = TArray, 
+    aText    = TArray, 
+    aCode    = TArray, 
+    aComment = TArray, 
+    Ch       = 0     , 
+    i, s,            ;
+
+  If (p_Mesage == Null) p_Mesage = "Выберите филиал"; End;
+  If (p_Head   == Null) p_Head   = "Выберите филиал"; End;
+
+  i = 0;
+  While (ok)
+    aCode[i]    = rs.Value("T_CODE"   );
+    aFil[i]     = rs.Value("T_NAME"   );
+    aComment[i] = rs.Value("T_COMMENT");
+    aText[i]    = String(rs.Value("T_NAME"   ):12, rs.Value("T_COMMENT"));
+
+    i = i + 1;
+    ok = rs.MoveNext();
+  End;
+
+  Ch = Menu(aText, p_Mesage, p_Head, p_Left, p_Top);
+  If (Ch>=0)
+    SetParm(0, aFil[Ch]    );
+    SetParm(1, aComment[Ch]);
+    Return aCode[Ch];
+  End;
+  Return Ch;
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnSelectTask(p_WithAll, p_ExceptList)
+  Private Var 
+    rs    = kvnRsdRecordset("SELECT LITERA, NAME FROM RSL_TASKS_DBT WHERE ISLOCK = 0 ORDER BY SORT"), 
+    aTask = TArray, 
+    ok            , 
+    ch    = 0     ;
+
+  ok = (rs!=Null);
+  If ((p_WithAll == Null) Or (p_WithAll == True)) aTask[0] = "ВСЕ"; End;
+  While (ok)
+    If ((p_ExceptList==Null ) Or 
+        (p_ExceptList=="ВСЕ") Or 
+        (Index(p_ExceptList, rs.Value("LITERA"))==0)
+       )
+      aTask[aTask.Size] = String(rs.Value("LITERA"), " : ", rs.Value("NAME"));
+    End;
+    ok = rs.MoveNext();
+  End;
+  ch = menu(aTask);
+  If (ch< 0) Return Null;     End;
+  If (ch==0) Return aTask[0]; End;
+  Return SubStr(aTask[ch], 1, 1);
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnCorrectSumFromNDS(p_NDS, p_Rate)
+
+  Var Sum    = (p_NDS * 100) / p_Rate;            /* По НДС восстановили сумму платежа          */
+  Var SumAll = Round(Money(String(Sum+p_NDS)), 0);/* По сумме платежа и НДС восстановили полную 
+                                                       сумму и округлили до целых рублей        */
+  Var Rate   = Double(p_Rate);
+  Var Nds    = Round(Money(String(SumAll*Rate/(100+Rate)))); /* Расчетный НДС от целых рублей   */
+
+  If (Nds == Round(p_NDS))                        /* Совпало! Значит, это погрешность           */
+    SetParm(2, SumAll - p_Nds);                   /* Сумма платежа без НДС                      */
+    Return SumAll;                                /* Сумма платежа с НДС                        */
+  Else                                            /* Не совпало...                              */
+    SetParm(2, Sum);                              /* Сумма платежа без НДС                      */
+    Return Sum + p_NDS;                           /* Сумма платежа с НДС                        */
+  End;
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnAddLog(p_ID, p_IAPPLICATIONKIND, p_APPLICATIONKEY, p_NUMB, p_RESERVE, p_DOCNAME)
+  Var sql = "INSERT INTO RSL_KVNLOG_DBT \n" +
+            "(ID, IAPPLICATIONKIND, APPLICATIONKEY, NUMB, OPERID, SDATE, RESERVE, DOCNAME) \n" +
+            "VALUES (?,  ?,                ?,              ?,    ?,      ?,     ?,       ?)";
+  kvnRunRsdCommand(sql, p_ID, p_IAPPLICATIONKIND, p_APPLICATIONKEY, p_NUMB, 
+                   {Oper}, DtTm(Date(), Time()), p_RESERVE, p_DOCNAME);
+
+/*  НАЙТИ ДОКУМЕНТЫ, К КОТОРЫМ ПРИЧАСТНЫ 2 ОПЕРАЦИОНИСТА
+SELECT NUMB FROM
+(  SELECT NUMB, OPERID 
+  FROM RSL_KVNLOG_DBT 
+  WHERE  TO_DATE(SDATE,'DD.MM.YYYY') = '14.02.0006'
+  GROUP BY NUMB, OPERID
+)  
+GROUP BY NUMB
+HAVING COUNT(*)>1
+*/
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO GetOperID_ForPaym(p_PaymentID)
+  Var sql = "SELECT od.T_ID_OPERATION FROM DPMPAYM_DBT pm, DPMDOCS_DBT pmd, DOPRDOCS_DBT od \n" +
+            " WHERE pm.T_PAYMENTID = "+p_PaymentID+" AND pmd.T_PAYMENTID = pm.T_PAYMENTID \n " +
+            " AND od.T_DOCKIND = 1 \n" +
+            " AND od.T_DOCUMENTID = TRIM(LPAD(pmd.T_APPLICATIONKIND,5,'0') || pmd.T_APPLICATIONKEY)";
+  kvnViewFile(sql);
+  Var rs = kvnRsdRecordset(sql, p_PaymentID);
+  If (rs!=Null)
+    Return Int(rs.Value(0));
+  End;
+  Return Null;
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO KillOper(p_OperID)
+  If (p_OperID==Null) Return False; End;
+  If (p_OperID==0)    Return False; End;
+
+  kvnRunRsdCommand("DELETE FROM DOPRDOCS_DBT  WHERE T_ID_OPERATION = ?", p_OperID);
+  kvnRunRsdCommand("DELETE FROM DOPRSTEP_DBT  WHERE T_ID_OPERATION = ?", p_OperID);
+  kvnRunRsdCommand("DELETE FROM DOPRDATES_DBT WHERE T_ID_OPERATION = ?", p_OperID);
+  kvnRunRsdCommand("DELETE FROM DOPRACC_DBT   WHERE T_ID_OPERATION = ?", p_OperID);
+  kvnRunRsdCommand("DELETE FROM DOPROPER_DBT  WHERE T_ID_OPERATION = ?", p_OperID);
+
+  Return True;
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnGetPaymentAndOperationForApKey(p_ApKind, p_ApKey, p_DocKind)
+  If (p_DocKind == Null) p_DocKind = 201; End;
+
+  Var vKey, sql, rs;
+
+  vKey = String(Int(p_ApKind):o:5, p_ApKey);
+
+  sql = "SELECT pm.* FROM DOPRDOCS_DBT dc, DOPROPER_DBT op, DPMPAYM_DBT pm \n" +
+        " WHERE dc.T_DOCKIND = 1 AND dc.T_DOCUMENTID = '" + vKey + "' AND  \n" +
+        " op.T_ID_OPERATION = dc.T_ID_OPERATION AND op.T_DOCKIND = " + p_DocKind + " \n" +
+        " AND pm.T_DOCKIND = op.T_DOCKIND AND pm.T_DOCUMENTID = TO_NUMBER(op.T_DOCUMENTID)";
+  Return kvnRsdRecordset(sql);
+END;
+/* -------------------------------------------------------------------------------------------- */
+MACRO kvnGetDocumentID(p_ApKind, p_ApKey)
+  Var vKey, sql, rs;
+
+  vKey = String(Int(p_ApKind):o:5, p_ApKey);
+
+  sql = "SELECT op.T_DOCKIND T_DOCKIND, TO_NUMBER(op.T_DOCUMENTID) T_DOCUMENTID \n" +
+        " FROM DOPRDOCS_DBT dc, DOPROPER_DBT op \n" +
+        " WHERE dc.T_DOCKIND = 1 AND dc.T_DOCUMENTID = '" + vKey + "' AND  \n" +
+        " op.T_ID_OPERATION = dc.T_ID_OPERATION";
+  Return kvnRsdRecordset(sql);
+END;
+/* --------------------------------------------------------------------------------------- */
+MACRO kvnGetStore(p_ModuleName, p_ID)
+  Var rs, ok, i;
+
+  p_ModuleName = StrUpr(Trim(p_ModuleName));
+  If (p_ID == Null) p_ID = 0; End;
+
+  rs = kvnGetRecordset("SELECT NOTE, VALUE FROM RSL_DEFAULT_DBT WHERE MODULENAME = ? AND FIELDNAME = ? AND OPER = ?", 
+                       p_ModuleName, String(p_ID), {Oper});
+  If (rs!=Null)
+    Return rs.Value("VALUE");
+  End;
+  Return 0;
+END;
+/* --------------------------------------------------------------------------------------- */
+MACRO kvnSetStore(p_ModuleName, p_ID, p_Value)
+  Var sql, val = String(p_Value);
+
+  p_ModuleName = StrUpr(Trim(p_ModuleName));
+  If (p_ID == Null) p_ID = 0; End;
+
+
+  If (val == "") Return False; End;
+
+  sql = "DELETE RSL_DEFAULT_DBT WHERE MODULENAME = ? AND FIELDNAME = ? AND OPER = ?";
+  kvnRunRsdCommand(sql, p_ModuleName, String(p_ID), {Oper});
+                   
+  sql = "INSERT INTO RSL_DEFAULT_DBT (MODULENAME, FIELDNAME, OPER, VALUE, NOTE) VALUES(?, ?, ?, ?, ?)";
+  kvnRunRsdCommand(sql, p_ModuleName, String(p_ID), {Oper}, Val, "Auto");
+  Return 0;
+END;
+/* --------------------------------------------------------------------------------------- */
+MACRO kvnUpdateStore(p_ModuleName, p_ID, p_Title)
+  Var v_old, v_new;
+
+  v_old = kvnGetStore(p_ModuleName, p_ID); 
+  v_new = v_old;
+  If (p_Title == Null) p_Title = String("Введите ", p_ID); End;
+
+  If (GetString(v_new, p_Title))
+    If (v_new!=v_old)
+      kvnSetStore(p_ModuleName, p_ID, v_new);
+    End;
+  End;
+  Return v_new;
+END;
+/* ---------------------------------------------------------------------------- */
+/*
+Var s = FindClientForAccount("40206810212070000052", "CLIENT");
+Var nm;
+
+println(s);
+println(GetClientNameForClientID(s, nm));
+println(nm);
+
+println(OperInGroup(62, 25));
+println(OperInGroupText(62, "Отдел внутрибанковских операций"));
+*/
+
+/*
+SELECT wl.T_PAYMENTID FROM DWLMES_DBT ms, DWLMESLNK_DBT lnk, DWLPM_DBT wl  
+WHERE 
+  ms.T_DIRECT = CHR(0) 
+  AND ms.T_TRN = '1302061200020000089525'
+  AND lnk.T_MESID = ms.T_MESID
+  AND wl.T_WLPMID = lnk.T_OBJID
+*/
+
