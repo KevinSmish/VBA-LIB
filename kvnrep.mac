@@ -1,0 +1,132 @@
+Var
+  v0  = TArray, 
+  v1  = TArray, 
+  v2  = TArray, 
+  v3  = TArray, 
+  pos = 0;
+
+
+CLASS TkvnRep(_cnt)
+  Var 
+    cnt, i, j, 
+    aCur;
+
+  MACRO Init()                          /* Инициализация класса                                */
+    aCur = TArray; aCur.Size = 0;
+    j = 0;
+    While (j<=cnt)
+      aCur[j] = "";
+      j = j + 1;
+    End;
+  END;
+
+  MACRO Verify(cur);                    /* Проверить текущее значение                          */
+    If   (cur==0)
+      Return (aCur[cur]==v0[pos]);
+    ElIf (cur==1)
+      Return (aCur[cur]==v1[pos]);
+    ElIf (cur==2)
+      Return (aCur[cur]==v2[pos]);
+    End;
+    Return False;
+  END;
+
+  MACRO Set(cur);                       /* Изменить текущее значение                           */
+    If   (cur==0)     
+      aCur[cur] = v0[pos];
+    ElIf (i==cur)
+      aCur[cur] = v1[pos];
+    ElIf (cur==2)
+      aCur[cur] = v2[pos];
+    End;
+  END;
+
+  MACRO PrintHead(cur);                 /* Отрисовка шапки cur                                 */
+    If   (cur==0)                                                                              
+      println("┌ ", aCur[cur]);
+    ElIf (cur==1)
+      println("│ ┌ ", aCur[cur]);
+    ElIf (cur==2)
+      println("│ │ ┌ ", aCur[cur]);
+    End;
+  END;
+
+  MACRO PrintTail(cur);                 /* Отрисовка хвоста cur                                */
+    If   (cur==0)
+      println("└ ", aCur[cur]);
+    ElIf (cur==1)
+      println("│ └ ", aCur[cur]);
+    ElIf (cur==2)
+      println("│ │ └ ", aCur[cur]);
+    End;          
+  END;
+
+  MACRO PrintHeads(IsEnd)
+    If (IsEnd)                          /* Запуск вне цикла, чтобы завершить отрисовку хвостов */
+      i = cnt;                          /* Хвосты рисуются с конца                             */
+      While (i>=0)                      /* И до начала                                         */
+        PrintTail(i);                   /* Рисуем очередной хвост                              */
+        i = i - 1;
+      End;
+      Return;                           /* Уходим                                              */
+    End;                                   
+
+    i = 0;
+    While (i<=cnt)                      /* Бежим по массиву группировок                        */
+      If (Not Verify(i))                /* Текущее значение устарело                           */
+        j = cnt;                        /* Перерисуем все хвосты с конца                       */
+        While (j>=i)                    /* До текущего                                         */
+          If (aCur[j]!="")              /* Значение участвовало в отрисовке                    */
+            PrintTail(j);               /* Рисуем хвост                                        */
+            aCur[j] = "";               /* Чтобы более глубокое значение случайно не совпало   */
+          End;
+          j = j - 1;                    /* Предыдущий, поскольку хвосты отрисовываем с конца   */
+        End;
+        Set(i);                         /* Устанавливаем новое текущее значение                */
+        PrintHead(i);                   /* Рисуем голову                                       */
+      End;
+      i = i + 1;                        /* Следующий элемент группировки                       */
+    End;
+  END;
+
+  cnt = _cnt;
+  Init();
+END;
+
+Var rep = TkvnRep(2);
+
+MACRO SetArr(a, b, c, d);
+  v0[v0.Size] = a;
+  v1[v1.Size] = b;
+  v2[v2.Size] = c;
+  v3[v3.Size] = d;
+END;
+
+MACRO PrintArr()
+  pos = 0;
+  While (pos<v0.Size)
+    rep.PrintHeads();
+    [│ │ │ ###########:############:##:#####]
+    (      v0[pos],    v1[pos],     v2[pos], v3[pos]);
+    pos = pos + 1;
+  End;
+  rep.PrintHeads(True);
+END;
+
+MACRO Main()
+  v0.Size = 0;   v1.Size = 0;   v2.Size = 0;   v3.Size = 0;
+
+  SetArr("УИАБР", "ИВАНОВ",  "ПН", 1);
+  SetArr("УИАБР", "ИВАНОВ",  "ПН", 2);
+  SetArr("УИАБР", "ИВАНОВ",  "ПН", 3);
+  SetArr("УИАБР", "ПЕТРОВ",  "ВТ", 2);
+  SetArr("УИАБР", "ПЕТРОВ",  "СР", 1);
+  SetArr("УБУИО", "СЕРГЕЕВ", "СР", 6);
+
+  PrintArr();
+END;
+
+Main();
+
+
+
