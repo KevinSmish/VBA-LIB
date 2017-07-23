@@ -1,0 +1,160 @@
+/* *********************************************************** */
+/* Библиотека работы со строками                               */
+/* *********************************************************** */
+
+CLASS TkvnString();
+  /*
+    MACRO ToLen(cStr, cLen, cSymb, cLeft);         /* Режем/добиваем строку слева/справа   */
+    MACRO ToLenCenter(cStr, cLen, cSymb);          /* Центрируем строку по заданной ширине */
+    MACRO PadL(cStr, cLen, cSymb)                  /* Режем/добиваем слева                 */
+    MACRO PadR(cStr, cLen, cSymb)                  /* Режем/добиваем справа                */
+    MACRO Right(pStr, pLen);                       /* Часть строки справа                  */
+    MACRO SeekAndSplit(cString, cTag, cBefore, cAfter); /* Найти и разрезать по тагу       */
+    MACRO SplitToArray(cStr, arr, cChr);           /* Режем текст на строки массива        */
+    MACRO GetArraySize(vArr)                       /* Вычисляем размер Array или TArray    */
+    MACRO GetMaxLenInArray(vArr)                   /* Ищем самую длинную строку в массиве  */
+    MACRO FindInArray(vArr, vEl);                  /* Ищем элемент массива. Возр.инд.или -1*/
+    MACRO IsDigit(Ch)                              /* Является ли текущий символ цифрой?   */
+  */
+
+  /* ************************************************************************************* */
+  MACRO ToLen(cStr, cLen, cSymb, cLeft);           /* Режем/добиваем строку слева/справа   */
+    Private Var s, vLen;
+
+    If (cStr == Null) cStr = ""; End; 
+
+    s    = String(cStr);
+    vLen = StrLen(s);
+
+    If (vLen>cLen)    Return SubStr(s, 1, cLen); End;
+    If (vLen == cLen) Return cStr;               End; 
+
+    If (cSymb==Null) cSymb = " "; End; 
+    If ((cLeft==Null) Or (cLeft == True))
+      While (vLen<cLen) 
+        cStr = cSymb + cStr;
+        vLen = vLen + 1;
+      End;
+    Else
+      While (vLen<cLen) 
+        cStr = cStr + cSymb;
+        vLen = vLen + 1;
+      End;
+    End;
+    Return cStr;
+  END;
+
+  /* ************************************************************************************* */
+  MACRO ToLenCenter(cStr, cLen, cSymb);            /* Центрируем строку по заданной ширине */
+    Private Var s = ToLen(cStr, (cLen+StrLen(cStr))/2, cSymb, False);
+    Return ToLen(s, cLen, cSymb);
+  END;
+
+  /* ************************************************************************************* */
+  MACRO PadL(cStr, cLen, cSymb)                    /* Режем/добиваем слева                 */
+    Return ToLen(cStr, cLen, cSymb, True);
+  END;
+
+  /* ************************************************************************************* */
+  MACRO PadR(cStr, cLen, cSymb)                    /* Режем/добиваем справа                */
+    Return ToLen(cStr, cLen, cSymb, False);
+  END;
+
+  /* ************************************************************************************* */
+  MACRO Right(pStr, pLen);                         /* Часть строки справа                  */
+    Var vLen = StrLen(pStr),
+        i;
+    
+    If (vLen<=pLen) Return pStr; End;
+    Return SubStr(pStr, vLen-pLen+1);
+  END;
+
+  /* ************************************************************************************* */
+  MACRO SeekAndSplit(cString, cTag, cBefore, cAfter); /* Найти и разрезать по тагу         */
+    Var i = Index(cString, cTag);
+
+    If (i==0)
+      SetParm(1, "");               /* cTag    */
+      SetParm(2, cString);          /* cBefore */
+      SetParm(3, "");               /* cAfter  */
+    Else
+      SetParm(2, SubStr(cString, 1, i-1));
+      SetParm(3, SubStr(cString, i+StrLen(cTag)));
+    End;
+
+    Return i;
+  END;
+
+  /* ************************************************************************************* */
+  MACRO SplitToArray(cStr, arr, cChr);             /* Режем текст на строки массива        */
+    Var i   = 0, 
+        j   = -1,
+        len = StrLen(cStr),                        /* Длина текста                         */
+        cC  =cStr;                                 /* Это вся строка                       */
+
+    If ( cChr==Null ) cChr = "\n"; End;            /* Если символ разделитель не указан    */
+
+    While (i<len)                                  /* Бежим по символам                    */
+      cC = SubStr(cC, i+1);                        /* Остаток строки                       */
+      i  = StrBrk(cC,cChr);                        /* Пытаемся найти совпадения            */
+      if (i==0) i = len + 1; end;                  /* Совпадений не найдено. На выход      */
+      If (cC!="Undefined")
+        arr[j=j+1] = SubStr(cC,1,i-1);             /* Начало строки до символа разделителя */
+      End;
+    End;
+    Return j;
+  END;
+
+  /* ************************************************************************************* */
+  MACRO GetArraySize(vArr)                         /* Вычисляем размер Array или TArray    */
+    If (ValType(vArr) == 15)                       /* Ясно и ежу: ValType(V_ARRАY) = 15    */
+      Return ASize(vArr);                          /* Размер массива определим ч/з ASize   */
+    End;                                           /* ValType(TArray) = 19                 */
+    Return vArr.Size;                              /* Размер TArray определим через .Size  */
+  END;
+
+  /* ************************************************************************************* */
+  MACRO GetMaxLenInArray(vArr)                     /* Ищем самую длинную строку в массиве  */
+    Var i      = 0,                             
+        MaxLen = 0;
+
+    While ( i<GetArraySize(vArr) )              /* Бежим по массиву, пока он есть       */
+      If ( StrLen(vArr[i])>MaxLen ) MaxLen = StrLen(vArr[i]); End;/* У нас новый лидер*/
+      i = i + 1;                                   /* Дальше, дальше, дальше...            */
+    End;
+    Return MaxLen;                                 /* Возвращаем лидера                    */
+  END;
+
+  /* ************************************************************************************* */
+  MACRO FindInArray(vArr, vEl);                    /* Ищем элемент массива. Возр.инд.или -1*/
+    Var i = 0;
+
+    While ( i<GetArraySize(vArr) )                 /* Бежим по массиву, пока он есть       */
+      If ( vArr[i] == vEl) Return i; End;          /* Ура! элемент найден                  */
+      i = i + 1;                                   /* Дальше, дальше, дальше...            */
+    End;
+    Return -1;                                     /* Я совсем ничего не принес...(С) Заяц */
+  END;
+
+  MACRO IsDigit(Ch)                                /* Является ли текущий символ цифрой?   */
+    Var code = CodeFor(Ch);                        /* Берем код символа                    */
+    Return ((code>=48) And (code<=57));            /* Проверка диапазона цифр              */
+  END;
+
+END;
+
+Var sysStr = TkvnString;
+
+/* ╔═════════════════════════════════════════════════════════════════════════════════════╗
+   ║ Пример использования класса                                                         ║
+
+println(sysStr.ToLen("123", 7, ".", True));
+println(sysStr.ToLenCenter("123", 7, ".", True));
+println(sysStr.PadL("123",7,"0"));
+println(sysStr.PadR("123",8,"0"));
+println(sysStr.Right("123",2));   
+                                                                                          
+   ║ Окончание примера использования класса                                              ║
+   ╚═════════════════════════════════════════════════════════════════════════════════════╝
+*/
+
