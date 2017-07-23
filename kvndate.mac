@@ -1,0 +1,112 @@
+/* *********************************************************** */
+/* Библиотека работы с датами                                  */
+/* *********************************************************** */
+
+CLASS TkvnDate();
+
+/*
+  /* ***************************************************************************** */
+  MACRO FirstDayOfMonth(cDate);               /* Находим первый день месяца        */
+  MACRO LastDayOfMonth(cDate);                /* Последний день месяца             */
+  MACRO GetDayName(nn)                        /* Наименования дня недели           */
+  MACRO GetDayOfWeek(Дата)                    /* Номер дня неедли                  */
+  MACRO MonthToStrRodit(cMonth)               /* Названия месяца в родит. падеже   */
+  /* ***************************************************************************** */
+*/
+
+  /* ***************************************************************************** */
+  MACRO FirstDayOfMonth(cDate);               /* Находим первый день месяца        */
+    Var dd, mm, yy;                           /* Переменные для разбора даты       */
+    DateSplit(cDate, dd, mm, yy);             /* Разобрали дату на части           */
+    Return cDate - dd + 1;                    /* Возвращаем первый день месяца     */
+  END;
+
+  /* ***************************************************************************** */
+  MACRO LastDayOfMonth(cDate);                /* Последний день месяца             */
+    Var dd = FirstDayOfMonth(cDate);
+    Return FirstDayOfMonth(dd+31)-1;
+  END;
+
+  /* ***************************************************************************** */
+  MACRO GetDayName(nn)                        /* Наименования дня недели           */
+    If   (nn==1)
+      Return "понедельник";
+    ElIf (nn==2)
+      Return "вторник";
+    ElIf (nn==3)
+      Return "среда";
+    ElIf (nn==4)
+      Return "четверг";
+    ElIf (nn==5)
+      Return "пятница";
+    ElIf (nn==6)
+      Return "суббота";
+    ElIf (nn==7)
+      Return "воскресение";
+    End;
+    Return nn;
+  END;
+
+  /* ***************************************************************************** */
+  MACRO GetDayOfWeek(Дата)                    /* Номер дня неедли                  */
+    Const Воскресенье = Date(26,3,2000);
+
+    Var Разница   = Abs(Дата - Воскресенье);
+    Var Результат = Разница - Int(Разница/7)*7;
+    If (Дата < Воскресенье)
+      Результат = 7 - Результат
+    End;
+    If (Результат == 0)
+      Результат = 7
+    End;
+    Return Результат
+  End;
+
+  /* ***************************************************************************** */    
+  MACRO MonthToStrRodit(cMonth)               /* Названия месяца в родит. падеже   */
+    If   (cMonth==1)
+      Return "января";
+    ElIf (cMonth==2)
+      Return "февраля";
+    ElIf (cMonth==3)
+      Return "марта";
+    ElIf (cMonth==4)
+      Return "апреля";
+    ElIf (cMonth==5)
+      Return "мая";
+    ElIf (cMonth==6)
+      Return "июня";
+    ElIf (cMonth==7)
+      Return "июля";
+    ElIf (cMonth==8)
+      Return "августа";
+    ElIf (cMonth==9)
+      Return "сентября";
+    ElIf (cMonth==10)
+      Return "октября";
+    ElIf (cMonth==11)
+      Return "ноября";
+    ElIf (cMonth==12)
+      Return "декабря";
+    End;
+    Return cMonth;
+  END;
+
+END;
+
+Var sysDate = TkvnDate;
+
+/* ╔═════════════════════════════════════════════════════════════════════════════════════╗
+   ║ Пример использования класса                                                         ║
+
+Var {CurDate}, cDate = {CurDate};
+
+println(sysDate.FirstDayOfMonth(cDate));
+println(sysDate.LastDayOfMonth(cDate));
+println(sysDate.GetDayName(sysDate.GetDayOfWeek(cDate)));
+println(sysDate.MonthToStrRodit(2));
+
+   ║ Окончание примера использования класса                                              ║
+   ╚═════════════════════════════════════════════════════════════════════════════════════╝
+*/
+
