@@ -1,0 +1,360 @@
+Var arr = TArray;
+/*
+import 
+  rcw, 
+  "..\\mac.usr\\TOOLS\\kvnrsd.mac", 
+  "..\\mac.usr\\TOOLS\\kvnstr.mac";
+*/
+
+import 
+  rcw, 
+  "D:\\KVN\\RSL\\kvnrsd.mac", 
+  "D:\\KVN\\RSL\\kvnstr.mac";
+
+/* ***************************************************************************************** */
+CLASS (TRslEvHandler) TkvnVCL
+
+  const 
+    EV_ONCLICK          =  1, 
+    EV_QUERYDESTROYFORM =  2;
+
+  Const 
+    GETSTRING_PREV    = -1,
+    GETSTRING_NEXT    =  1,
+    GETSTRING_PREMIER =  2,
+    GETSTRING_HEAD    =  3;
+
+  Var 
+    ob       : Object,                               /* Основной объект связи с VCL          */
+    StrForm  : String,                               /* Маска формы одной строкой            */
+    aStrForm         ,                               /* Маска формы массивом                 */
+    StepX            , 
+    StepY            , 
+    FlagDestroyForm  , 
+    None             ;
+
+  /* РЕАЛИЗАЦИЯ КЛАССА */
+  MACRO Text(Name, val)
+    Var ClassName = ob.RunObjMethod(Name, "ClassName");
+    Var ret, PropName;
+    If (ClassName=="TForm")
+      PropName = "Caption";
+    ElIf (ClassName == "TLabel")
+      PropName = "Caption";
+    ElIf (ClassName == "TEdit")
+      PropName = "Text"; 
+    ElIf (ClassName == "TButton")
+      PropName = "Caption";
+    ElIf (ClassName == "TCheckBox")
+      PropName = "State";
+    ElIf (ClassName == "TMaskEdit")
+      PropName = "Text";
+    ElIf (ClassName == "TMemo")
+      ob.GetObject(Name,"Lines",0); /* Во внутреннем массиве билдера сгенерировали объект 0 */
+      ret = ob.RunObjMethod(0, "GetText");
+      If (val!=Null)
+        ob.RunObjMethod(0, "Clear");
+        ob.RunObjMethod(0, "Add", val);
+      End;
+      Return ret;
+    Else
+/*
+TComboBox
+═══════════
+TTreeView
+═══════════
+TStringGrid
+*/
+
+      PropName = Null;
+    End;
+
+    If (PropName!=Null)
+      ret = ob.GetObjProp(Name, PropName);
+
+      If (ClassName == "TMaskEdit") 
+        ret = Date(ret); 
+      ElIf (ClassName == "TCheckBox")
+        ret = Int(ret);
+      End;
+
+      If (val!=Null) 
+        ob.SetObjProp(Name, PropName, val); 
+      End;
+      Return ret;
+    End;
+    Return "???";
+  END;
+
+  MACRO Ev_OnCreateForm;
+    FlagDestroyForm = False;
+    /* Обработчик события. Вызывается при создании формы                                     */
+  END;
+
+  MACRO Ev_OnDestroyForm;
+    /* Обработчик события. Вызывается при уничтожении формы                                  */
+  END;
+
+  MACRO Ev_OnEvControl(EventType,ControlName);
+    Var val;
+    If (EventType == EV_QUERYDESTROYFORM) /* Форма сообщила, что ее СКРЫЛИ С ГЛАЗ крестом    */
+      FlagDestroyForm = True;                        /* Можно выходить                       */
+      /* А вот так RSL может сказать библиотеке, что закрывать форму нельзя : 
+         ob.FlagCloseFormRSL = 0;                                                            */
+    ElIf (EventType == EV_ONCLICK)
+      MsgBox(ControlName, ":", Text(ControlName));
+    End;
+  END;
+
+  MACRO Init();
+    aStrForm = TArray;                               /* Инициализация класса                 */
+    ob       = CreateObject ("kvnform","TkvnFormClass",null,false);
+    EvSource("Ev") = ob;
+    StepX    = 8;
+    StepY    = 16;
+  END;
+
+  MACRO AddControl(cType, cName, cText, cLeft, cTop, cWidth, cHeight);
+    ob.CreateControl(cType, cName, cText, cLeft, cTop, cWidth, cHeight);
+  END;
+
+  MACRO Title(val);
+    Var ret = ob.GetObjProp("TForm", "Caption");
+    If (val!=Null)
+      ob.SetObjProp("TForm", "Caption", val);
+    End;
+    Return val;
+  End;
+
+  MACRO StatusLine(val);
+    Var ret = ob.GetObjProp("StLine", "SimpleText");
+    If (val!=Null)
+      ob.SetObjProp("StLine", "SimpleText", val);
+    End;
+    Return val;
+  END;
+
+  MACRO SplitArrayToControls()                       /* Делим массив маски формы на контролы */
+    Var c,r,ch;                                     
+    Var cLen;
+
+    Const TypeControls = "LEFTMBCDG";               /* Контролы могут быть вот такими       */
+
+    MACRO SkipSpace()                                /* Подфункция. Пропуск пробелов         */
+      While (SubStr(aStrForm[r],c,1)==" ")
+        c = c + 1;
+      End;
+    END;
+
+    MACRO SkipLabel()                                /* Подфункция. Пропуск метки            */
+      Var vb,ve, ss;
+      Var ch, type, hg, offX;
+      Var ok;
+      Var re = "/" +                                 /* Начало регулярного выражения         */
+               "#" +                                 /* Символ решетки                       */
+               "[" + TypeControls + "]" +            /* Любой символ типа контрола           */
+               "\\d\\d" +                            /* Две цифры                            */
+               "(#)*"   +                            /* Ноль или больше решеток              */
+               "/";                                  /* Завершение регулярного выражения     */
+
+      Var rest = SubStr(aStrForm[r],c);
+      Var Found = kvnRegExp(re, rest, vb, ve);
+      If (Found)
+
+        ss = SubStr(aStrForm[r],c,vb);
+        AddControl("TLabel", ss, ss, c*StepX, r*StepY, vb*StepX, StepY);
+
+        offX = c+vb;
+        ss = SubStr(aStrForm[r], offX,ve-vb);
+        ch = StrUpr(SubStr(ss, 2, 1));
+
+        /* Сосчитаем высоту контрола                                                         */
+        hg = r+1;
+        ok = True;
+        While ((hg<aStrForm.Size) And (Ok))
+          If (SubStr(aStrForm[hg], offX, 1)!="#") 
+            Ok = False; 
+          ElIf ((offX                                                 > 4) And  /* Контрол под контролом */
+                (Index(TypeControls, SubStr(aStrForm[hg], offX-3, 1)) > 0) And
+                (sysStr.IsDigit(SubStr(aStrForm[hg], offX-2, 1))         ) And
+                (sysStr.IsDigit(SubStr(aStrForm[hg], offX-1, 1))         )
+               )
+            Ok = False;
+          Else
+            hg = hg + 1;
+          End;
+        End;
+        hg = hg - r;
+
+        If   (ch=="B")
+          type = "TButton";
+        ElIf (ch=="F")
+          type = "TCheckBox";
+        ElIf (ch=="C")
+          type = "TComboBox";
+        ElIf (ch=="M")
+          type = "TMemo";
+        ElIf (ch=="D")
+          type = "TMaskEdit";
+        ElIf (ch=="T")
+          type = "TTreeView";
+        ElIf (ch=="G")
+          type = "TStringGrid";
+        Else
+          If (hg==1)
+            type = "TEdit";
+          Else
+            type = "TMemo";
+          End;
+        End;
+
+        AddControl(type, SubStr(ss, 2, 3), "", (c+vb)*StepX, r*StepY, (ve-vb)*StepX, hg*StepY);
+        c = c + ve;
+      Else
+        ss = SubStr(aStrForm[r],c);
+        AddControl("TLabel", ss, ss, c*StepX, r*StepY, StrLen(ss)*StepX, StepY);
+        c = cLen+1;
+      End;                             
+      rest = SubStr(aStrForm[r],c);
+    END;
+    /* ***************************** */
+
+    r = 0;
+    While (r<aStrForm.Size)
+      cLen = StrLen(aStrForm[r]);
+      c    = 1;
+      While (c<=cLen)
+        SkipSpace();    
+        SkipLabel();
+      End;
+      r = r + 1;
+    End;
+  END;
+
+  MACRO BuildForm();                                 /* Построение формы                     */
+    Var 
+    i, j             , 
+    Width            , 
+    Height           ;
+
+    i = 1;
+    StrForm = "";
+
+    While (GetParm(i, j))
+      If (StrForm!="") StrForm = StrForm + "|"; End;
+      StrForm = StrForm + j;
+      i = i + 1;
+    End;
+    sysStr.SplitToArray(StrForm, aStrForm, "|");
+    Width  = (sysStr.GetMaxLenInArray(aStrForm)+3)*StepX;
+    Height = (aStrForm.Size+3)*StepY;
+    ob.CreateForm("Форма",-10,10, Width, Height);
+    ob.CreateControl("TStatusBar", "StLine", "", 0, 0, 0, 20);
+    SplitArrayToControls();
+  END;
+
+  MACRO Rename(OldName, NewName);
+    ob.SetObjProp(OldName, "Name", NewName);
+  END;
+
+  MACRO Show(_Left, _Top, _Title, _StatusLine);      /* Покажем форму                        */
+    If (_Left!=Null)
+      ob.SetObjProp("TForm", "Position", 0);         /* Не нужно автоматически центрироваться*/
+      ob.SetObjProp("TForm", "Left", _Left);
+      If (_Top!=Null)
+        ob.SetObjProp("TForm", "Top", _Top);
+      End;
+    End;
+    ob.RunObjMethod("TForm","Show");
+
+    While (Not FlagDestroyForm)                      /* Гоним пустой цикл                    */
+      TestEvent();
+    End;
+  END;
+
+  MACRO Dispose()                                    /* Уничтожаем форму за ненадобностью    */
+    ob.DestroyForm();                                          
+  END;
+
+  /* ************************************* */
+  Init();
+  /* Var sysStr = TkvnString;              */
+END;
+
+/*
+   ╔════════════╦═════════╦═══════════════════╦══════╦══════╦══════════════════════════════╗
+   ║ ТИП        ║ОПИСАТЕЛЬ║СВОЙСТВА И МЕТОДЫ  ║СВ/МЕТ║ТИП   ║ ОПИСАНИЕ                     ║
+   ╠════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TForm      ║TForm    ║                   ║      ║      ║                              ║
+   ║════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TLabel     ║L        ║                   ║      ║      ║                              ║
+   ║════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TEdit      ║E        ║                   ║      ║      ║                              ║
+   ║════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TButton    ║B        ║                   ║      ║      ║                              ║
+   ╠════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TCheckBox  ║F        ║                   ║      ║      ║                              ║
+   ║════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TComboBox  ║C        ║                   ║      ║      ║                              ║
+   ╠════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TMemo      ║M        ║                   ║      ║      ║                              ║
+   ╠════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TMaskEdit  ║D        ║                   ║      ║      ║                              ║
+   ╠════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TTreeView  ║T        ║                   ║      ║      ║                              ║
+   ╠════════════╬═════════╬═══════════════════╬══════╬══════╬══════════════════════════════╣
+   ║ TStringGrid║G        ║                   ║      ║      ║                              ║
+   ╚════════════╩═════════╩═══════════════════╩══════╩══════╩══════════════════════════════╝
+
+*/
+
+/* ***************************************************************************************** */
+/* Body For EveryBody                                                                        */
+/* ***************************************************************************************** */
+
+Var frm = TkvnVCL();
+Var val;
+frm.StepY = 24;
+
+/*
+frm.buildForm(
+"|",
+" Регистрационный номер банкомата     #E01####                                 |",
+" Серийный номер банкомата            #E02###########|",
+" Номер \"мерчанта\" (Код ТУ)           #E03########|", 
+"|",
+" Адрес установки                     #E04####################################|", 
+" Место установки                     #E05####################################|", 
+" Тип банкомата                       #E06################ |", 
+" Лицевой счет банкомата в балансе    #E07##################### |", 
+" Дата ввода банкомата в эксплуатацию #E08###### |", 
+" Наименование населенного пункта     #E09################ |", 
+"|",
+" Полис по страхованию имущества  #E10#######################  Дата #E11######|", 
+" Полис по страхованию наличности #E12#######################  Дата #E13######|", 
+"|",
+" Реквизиты распорядительного документа по лимитам #E14#######################|",
+" Лимит загрузки денежных средств в банкомат            #E15###########|", 
+" Лимит загрузки денежных средств в дни массовых выплат #E16###########|");
+*/
+
+
+  frm.BuildForm(
+    ".", 
+    "123456789012345678901234567890123456789012345678901234567890", 
+    "Надпись##№1 #E01#########E0Надпись № 2 #E02Надпись3#B04# Вот", 
+    "            #############                          #####    ", 
+    "        #D03#############                          #####    ", 
+    "   #E07#", 
+    "E08#           #F09##############                           ", 
+    "123456789012345678901234567890123456789012345678901234567890", 
+    "."
+  );
+
+  frm.Rename("E01", "Поле1"); frm.Text("Поле1", "123");
+
+frm.Title("???");
+frm.StatusLine("XXX");
+frm.Show(100, 100);
+/*MsgBox(frm.ob.GetVersionLib);*/
+frm.Dispose();
