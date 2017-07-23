@@ -1,0 +1,618 @@
+/*
+#FileName:  kvnexcel.mac
+#Create:    27.03.07
+#System:    Banking
+#SubSystem: РКО юр.лиц, Главная книга
+#Module:    
+#Notes:     Библиотека классов для быстрого заполнения шаблонов MS Excel и MS Word 
+            в территориально удаленных ОСБ.
+#EndNotes:
+#Type:      библиотека
+#Author:    KVN Козулин В.Н., Вологодское ОСБ №8638
+#Modify
+            14.02.2008 LAV. Добавил класс CFastWord для работы с MS Word
+            11.06.2008 KVN. Добавлены методы MyVerifyRight, MyCopyFile и MyExecute
+
+Добавлены: Возможность создания алиасов для объектов для лучшей совместимости с синтаксисом ActivX-команд 
+
+#EndModify
+*/
+Import rsexts, rcw, "lgs.d32", "doctor.d32", "kvnlib60.mac", "kvnsign_rscom.mac";
+
+Private Var _objRef = 1;
+/* ----------------------------------------------------------- */
+CLASS CObjectExcel()
+  Var _Name, ID, obj;
+
+  Var Visible, Bold, HorizontalAlignment, VerticalAlignment, WrapText, 
+      Name, Value, Size, NumberFormat, ColumnWidth, RowHeight;
+
+  /* --------------------------------------------------------- */
+  MACRO Postpone()
+
+    If (Visible             != Null) obj.SetVisible(Visible                        , 0); End;
+    If (Bold                != Null) obj.SetBold(Bold                              , 0); End;
+    If (HorizontalAlignment != Null) obj.SetHorizontalAlignment(HorizontalAlignment, 0); End;
+    If (VerticalAlignment   != Null) obj.SetVerticalAlignment(VerticalAlignment    , 0); End;
+    If (WrapText            != Null) obj.SetWrapText(WrapText                      , 0); End;
+    If (Name                != Null) obj.SetName(Name                              , 0); End;
+    If (Size                != Null) obj.SetSize(Size                              , 0); End;
+    If (NumberFormat        != Null) obj.SetNumberFormat(NumberFormat              , 0); End;
+    If (ColumnWidth         != Null) obj.SetColumnWidth(ColumnWidth                , 0); End;
+    If (RowHeight           != Null) obj.SetRowHeight(RowHeight                    , 0); End;
+
+    If (Value   != Null) 
+      If (ValType(Value)==V_STRING) Value = obj.ToStr(Value); End; 
+      obj.SetValue(Value, ID); 
+    End;
+  END;
+  /* --------------------------------------------------------- */
+  MACRO OutStr(p_str) obj.Postpone(); obj.str = obj.str + p_str; obj.OutStr(id); END;
+  MACRO AddStr(p_str) obj.Postpone(); obj.str = obj.str + p_str; Return this;    END;
+  /* --------------------------------------------------------- */
+  MACRO AddObject(p_obj, p_str)
+    obj.Postpone();
+    If (p_str == Null) p_str = "." + p_obj; End;
+    obj.str = obj.str + p_str; 
+    Return obj.AddObject(p_str, id);
+  END;
+  /* --------------------------------------------------------- */
+  MACRO WorkSheets(p_Name) Return AddObject("WorkSheets", ".WorkSheets(" + obj.ToStr(p_Name) + ")"); END;
+  MACRO Add(p_Name)        Return AddObject("WorkBook"  , ".Add("        + obj.ToStr(p_Name) + ")"); END;
+  /* --------------------------------------------------------- */
+  MACRO WorkBooks()           Return AddStr(".WorkBooks"                               ); END;
+  MACRO Range(p_Name)         Return AddStr(".Range("        + obj.ToStr(p_Name)  + ")"); END;
+  MACRO ActiveCell()          Return AddStr(".ActiveCell"                              ); END;
+  MACRO ActiveSheet()         Return AddStr(".ActiveSheet"                             ); END;
+  MACRO Columns(p_Value)      Return AddStr(".Columns("      + obj.ToStr(p_Value) + ")"); END;
+  MACRO Offset(p_Row, p_Col)  Return AddStr(".Offset("       + p_Row + "," + p_Col+ ")"); END;
+  MACRO Rows(p_Value)         Return AddStr(".Rows("         + obj.ToStr(p_Value) + ")"); END;
+  MACRO Selection()           Return AddStr(".Selection"                               ); END;
+  MACRO SpecialCells(p_Value) Return AddStr(".SpecialCells(" + obj.ToStr(p_Value) + ")"); END;
+  MACRO Font()                Return AddStr(".Font"                                    ); END;
+  /* --------------------------------------------------------- */
+  MACRO AddMethod(p_MethodName, p_arg1, p_arg2)
+    Private Var cStr;
+    cStr = p_MethodName;
+    If (p_arg1!=Null)                                           // Есть аргументы
+      cStr = cStr + "(" + p_arg1;
+      If (p_arg2!=Null) cStr = cStr + ", " + p_arg2; End;       // Аргументов не меньше 2
+      cStr = cStr + ")";
+    End;
+    Return AddStr(cStr); 
+  END;
+  /* --------------------------------------------------------- */
+  MACRO SaveAs(p_Value)  OutStr(".SaveAs("  + obj.ToStr(p_Value   ) + ")"); END;
+  MACRO Save()           OutStr(".Save");                                   END;
+  MACRO Select()         OutStr(".Select");                                 END;
+  MACRO Open(p_FileName) OutStr(".Open("    + obj.ToStr(p_FileName) + ")"); END;
+  MACRO Merge()          OutStr(".Merge"                                 ); END;
+  /* --------------------------------------------------------- */
+  MACRO Cells(p_row, p_col)
+    If ((p_row==Null) Or (p_col==Null))
+      Return AddStr(".Cells");
+    Else
+      Return AddStr(".Cells(" + p_row + ", " + p_col + ")");
+    End;
+  END;
+  /* --------------------------------------------------------- */
+  Visible             = Null;
+  Bold                = Null;
+  HorizontalAlignment = Null;
+  VerticalAlignment   = Null;
+  WrapText            = Null;
+  Name                = Null;
+  Value               = Null;
+  Size                = Null;
+  NumberFormat        = Null;
+  ColumnWidth         = Null;
+  RowHeight           = Null;
+
+END;
+/* ----------------------------------------------------------- */
+CLASS CMainObject(p_Parent)
+  Var Parent = p_Parent;
+  Var aObj = TArray;
+  Var cur  = -1;
+  Var str  = "", BeforeStr = "";
+  Var FullName;
+  /* --------------------------------------------------------- */
+  MACRO Postpone();
+    Var i = 0;
+    While (i<aObj.Size)
+      aObj[i].Postpone();
+      i = i + 1;
+    End;
+    Parent.Postpone(False);
+  END;
+  /* --------------------------------------------------------- */
+  MACRO ToStr(p_Str)
+    Var ss = StrSubSt(p_Str, "\\", "\\\\");
+    ss = StrSubSt(ss, StrFor(34), "\\" + StrFor(34));
+    Return StrFor(34) + ss + StrFor(34);
+  END;
+  /* --------------------------------------------------------- */
+  MACRO Correct(p_Str)
+    Var ss = Trim(p_Str);
+    If (SubStr(ss, StrLen(ss))!=";") ss = ss + ";" End;
+    Return ss;
+  END;
+  /* --------------------------------------------------------- */
+  MACRO GetPrefix(id)  
+    If (id == 0) Return aObj[id]._Name; End;
+    Return "aXYZ1[" + id + "]"; 
+  END;
+  /* --------------------------------------------------------- */
+  MACRO OutStr(id)
+    If (str == Null) Return;   End;
+    If (str == ""  ) Return;   End;
+    If (id  == Null) id = cur; End;
+
+    Var OldOutput = SetOutput(FullName, True);
+    println(BeforeStr + GetPrefix(id) + Correct(str));
+    SetOutput(OldOutput, True);
+
+    str       = "";
+    BeforeStr = "";
+  END;
+  /* --------------------------------------------------------- */
+  MACRO AddObject(p_Name, p_ParentID)
+    Private Var OldCurElem = cur;
+
+    cur             = aObj.Size;
+    aObj[cur]       = CObjectExcel();
+    aObj[cur]._Name = p_Name;
+    aObj[cur].ID    = cur;
+    aObj[cur].obj   = this;
+
+    If (p_ParentID!=Null)
+      BeforeStr = GetPrefix(cur) + " = ";
+    End;
+
+    cur       = OldCurElem;
+    OutStr();
+    cur       = aObj.Size - 1;
+    Return aObj[cur];
+  END;
+  /* --------------------------------------------------------- */
+  MACRO SetVisible(p_Value            , p_From) str = str + ".Visible = "             + String(p_Value); SetParm(1, Null); OutStr(p_From); END;
+  MACRO SetBold(p_Value               , p_From) str = str + ".Bold = "                + String(p_Value); SetParm(1, Null); OutStr(p_From); END;
+  MACRO SetHorizontalAlignment(p_Value, p_From) str = str + ".HorizontalAlignment = " + String(p_Value); SetParm(1, Null); OutStr(p_From); END; 
+  MACRO SetVerticalAlignment(p_Value  , p_From) str = str + ".VerticalAlignment = "   + String(p_Value); SetParm(1, Null); OutStr(p_From); END; 
+  MACRO SetWrapText(p_Value           , p_From) str = str + ".WrapText = "            + String(p_Value); SetParm(1, Null); OutStr(p_From); END; 
+  MACRO SetName(p_Value               , p_From) str = str + ".Name = "                + ToStr(p_Value ); SetParm(1, Null); OutStr(p_From); END; 
+  MACRO SetSize(p_Value               , p_From) str = str + ".Size = "                + String(p_Value); SetParm(1, Null); OutStr(p_From); END; 
+  MACRO SetNumberFormat(p_Value       , p_From) str = str + ".NumberFormat = "        + ToStr(p_Value ); SetParm(1, Null); OutStr(p_From); END; 
+  MACRO SetColumnWidth(p_Value        , p_From) str = str + ".ColumnWidth = "         + String(p_Value); SetParm(1, Null); OutStr(p_From); END; 
+  MACRO SetRowHeight(p_Value          , p_From) str = str + ".RowHeight = "           + String(p_Value); SetParm(1, Null); OutStr(p_From); END; 
+  /* --------------------------------------------------------- */
+  MACRO SetValue(p_Value, p_From)
+    Var dd, mm, yy;
+    If (ValType(p_Value) == V_DATE)
+      DateSplit(p_Value, dd, mm, yy);
+      str = String(str, ".Value = Date(", dd, ", ", mm, ", ", yy, ")"); 
+    Else
+      str = String(str, ".Value = ", p_Value);
+      str = StrSubSt(str, StrFor(10), StrFor(34) + "+ StrFor(10) + " + StrFor(34));
+    End;
+    SetParm(1, Null); 
+    OutStr(p_From); 
+  END;
+  /* --------------------------------------------------------- */
+  MACRO MyVerifyRight()
+    // Проверяем,  достаточно ли у пользователя прав для запуска макроса
+    Return (Trim(lgFindFile("C:\\rsladm.txt"))!="");
+  END;
+  /* --------------------------------------------------------- */
+  MACRO MyCopyFile(vFullName)
+    private FILE MyTxt() txt;
+
+    Var 
+      arr = TArray        , 
+      ss  = TkvnSelectFile, 
+      vName, vName1, vExt, str, i;
+
+      vFullName = ToANSI(Trim(ss.Select("$C:\\", "*.*")));
+
+      If (vFullName == "") Exit (-1); End;
+      SplitFile(vFullName, vName, vExt);
+      vName1 = _Rs4UsersTRB + "TEMPFILE\\" + vName + vExt;
+      vName  = _Rs4UsersOsb + "TXTFILE\\"  + vName + vExt;
+
+      If (lgTermTerm(vFullName, vName))
+        If (dcCopyFile(vName, vName1))
+          dcDelFile(vName);
+          SetParm(0, vName1);
+          Return vName1;
+        End;
+      End;
+
+      _kvnOpenTermFile(vFullName, "r");
+      str = "1"; arr.Size = -1;
+      While (str!=Null)
+        str = _kvnStrTermFile();
+
+        //Message(arr.Size + " > " + str); TestEvent();
+        Message(arr.Size); TestEvent();
+
+        If (str!=Null) arr[arr.Size] = str; End;
+      End;
+      _kvnCloseTermFile();
+
+
+      SetOutPut(vName1);
+      i = 0;
+      While (i<arr.Size)
+        println(arr[i]);
+        i = i + 1;
+      End;
+      SetOutPut();
+
+/*
+      If (Not lgTermTerm(vFullName, vName))
+         MsgBox("1. Невозможно перенести файл " + vFullName + "|" + vName);
+         Exit(-1);
+      End;
+
+      dcDelFile(vName1);   
+      If (Not dcCopyFile(vName, vName1))
+         MsgBox("2. Невозможно перенести файл " + vName + "|" + vName1);
+         Exit(-1);
+      End;
+      dcDelFile(vName);
+
+      SetParm(0, vFullName);
+*/
+      Return vName1;
+
+   END;
+  /* --------------------------------------------------------- */
+  MACRO MyExecute()
+    private FILE MyTxt() txt;
+    Var fName, vFullName, str, i;
+
+    // Проверяем,  достаточно ли у пользователя прав для запуска макроса
+    If (Not MyVerifyRight()) 
+      Exit(-1);
+    End;
+
+    fName = MyCopyFile(vFullName);
+
+    If (Index(StrUpr(fName), ".MAC")>0) // MAC
+      str = GetIniString("TEXTDIR") + "\\PrintClb." + UserNumber();
+      i = SetOutput(str, False);
+
+      ExecMacroFile ( fName );
+      SetOutput(Null, True);
+
+      Open (MyTxt, str);
+      ViewFile (MyTxt);
+      Close (MyTxt);
+
+      Return False;
+    Else 
+      If (Not Open(MyTxt, fName))       // SQL
+         MsgBox("Невозможно открыть файл " + fName);
+         Return False;
+      End;
+
+      str = "";
+      InitProgress(-1, "", "Подождите, идет считывание файла"); i = 0;
+      While (next(MyTxt))                        /* Читаем пока читается                 */
+        str = str + MyTxt.str + " ";             /* Считали очередную строку             */
+        UseProgress(i=i+1);
+      End;
+      RemProgress();
+
+      Return str;
+
+    End;
+
+  END;
+  /* --------------------------------------------------------- */
+END;
+
+CLASS CFastExcel(p_UseExistActiveX)
+  Var obj, FlagShow;
+
+  Var Bold, Visible, Value, HorizontalAlignment, VerticalAlignment;
+  Var WrapText, Name, Size, NumberFormat, ColumnWidth, RowHeight;
+  Var nm;
+
+  /* --------------------------------------------------------- */
+  MACRO Init(p_UseExistActiveX)
+
+    FlagShow            = False;
+    obj                 = CMainObject(WeakRef(this));
+
+    Bold                = Null;
+    Visible             = Null;
+    Value               = Null;
+    HorizontalAlignment = Null;
+    VerticalAlignment   = Null;
+    WrapText            = Null;
+    Name                = Null;
+    Size                = Null;
+    NumberFormat        = Null;
+    ColumnWidth         = Null;
+    RowHeight           = Null;
+
+    Var tm = StrSubSt(String(Time(), ":", ""));
+    nm = String("xls", _objRef, "_", tm, UserNumber(), "_", {Oper}:o:4, ".mac");           /* Определим имя терминального макроса            */
+    obj.FullName = _Rs4UsersTRB +"TEMPFILE\\" + nm;
+    _objRef = _objRef + 1;
+
+    Var OldOutput = SetOutput(obj.FullName, False);                      /* Переключим консоль ввода-вывода на этот макрос */
+    If (p_UseExistActiveX == Null) p_UseExistActiveX = False; End;       /* Если параметр не определен, создавать новый экземпляр Excel */
+
+    println("Var aXYZ1 = TArray;");
+    println();
+    println("Var lg = ActiveX(\"Excel.Application\", Null, ", String(p_UseExistActiveX), ");");
+
+    SetOutput(OldOutput, True);
+
+    obj.AddObject("lg");
+
+  END;
+  /* --------------------------------------------------------- */
+  MACRO Postpone(p_RunObjPostpone) 
+
+    If (p_RunObjPostpone != False) obj.Postpone(); End;
+
+    If (Visible             != Null) obj.SetVisible(Visible                        , 0); End;
+    If (Bold                != Null) obj.SetBold(Bold                              , 0); End;
+    If (HorizontalAlignment != Null) obj.SetHorizontalAlignment(HorizontalAlignment, 0); End;
+    If (VerticalAlignment   != Null) obj.SetVerticalAlignment(VerticalAlignment    , 0); End;
+    If (WrapText            != Null) obj.SetWrapText(WrapText                      , 0); End;
+    If (Name                != Null) obj.SetName(Name                              , 0); End;
+    If (Size                != Null) obj.SetSize(Size                              , 0); End;
+    If (NumberFormat        != Null) obj.SetNumberFormat(NumberFormat              , 0); End;
+    If (ColumnWidth         != Null) obj.SetColumnWidth(ColumnWidth                , 0); End;
+    If (RowHeight           != Null) obj.SetRowHeight(RowHeight                    , 0); End;
+
+    If (Value   != Null) 
+      If (ValType(Value)==V_STRING) Value = obj.ToStr(Value); End; 
+      obj.SetValue(Value, 0); 
+    End;
+
+    If (p_RunObjPostpone != False) obj.Postpone(); End;
+
+  End;
+  /* --------------------------------------------------------- */
+  MACRO WorkBooks();          Postpone(); Return obj.aObj[obj.cur].WorkBooks();           END;
+  MACRO ActiveCell();         Postpone(); Return obj.aObj[obj.cur].ActiveCell();          END;
+  MACRO ActiveSheet();        Postpone(); Return obj.aObj[obj.cur].ActiveSheet();         END;
+  MACRO Columns(p_Value)      Postpone(); Return obj.aObj[obj.cur].Columns(p_Value);      END;
+  MACRO Rows(p_Value)         Postpone(); Return obj.aObj[obj.cur].Rows(p_Value);         END;
+  MACRO Offset(p_Row, p_Col)  Postpone(); Return obj.aObj[obj.cur].Offset(p_Row, p_Col);  END;
+//  MACRO Offset(p_Row, p_Col) Postpone(); Return obj.aObj[obj.cur].AddMethod(".Offset", p_Row, p_Col); END;
+  MACRO Selection()           Postpone(); Return obj.aObj[obj.cur].Selection();           END;
+  MACRO SpecialCells(p_Value) Postpone(); Return obj.aObj[obj.cur].SpecialCells(p_Value); END;
+  MACRO Merge()               Postpone(); Return obj.aObj[obj.cur].Merge()                END;
+  MACRO Font()                Postpone(); Return obj.aObj[obj.cur].Font()                 END;
+//  MACRO Sheets(p_Value)       Postpone(); str = str + ".Sheets("        + ToStr(p_Value) + ")"; Return this; END;
+//  MACRO Add()                 Postpone(); str = str + ".Add";                                   OutStr();    END;
+  /* ------------------------------------------------------ */
+  MACRO Range()
+    Private Var i, v, ret = "";
+    Postpone();
+
+    i = 1;
+    While (GetParm(i, v))
+      ret = String(ret, v);
+      i   = i + 1;
+    End;
+    obj.cur = 0;
+    Return obj.aObj[0].Range(ret);
+  END;
+  /* --------------------------------------------------------- */
+  MACRO Quit()       
+    Postpone(); 
+    obj.str = obj.str + ".Quit"; 
+    obj.OutStr(0); 
+    obj.cur = 0;
+    obj.aObj.Size = 1;
+  END;
+  /* --------------------------------------------------------- */
+  MACRO Show()
+    Postpone();
+    obj.OutStr();
+
+    Var nmTerm = lgGetCWD + "\\" + nm;
+    Var nmServ = _Rs4UsersOsb + "TxtFile\\" + nm;
+
+    SetOutput(Null, True);
+    If (Not dcCopyFile(obj.FullName, nmServ)) 
+      MsgBox("1. Ошибка копирования " + obj.FullName + " в " + nmServ);
+      Return False;
+    End;
+    dcDelFile(obj.FullName);
+    
+    If (Not lgTermTerm(nmServ, nmTerm))
+      MsgBox("2. Ошибка копирования " + nmServ + " в " + nmTerm);
+      Return False;
+    End;
+    lgDelFile(nmServ);
+
+    If (kvnIsAdmin()) MsgBox("На стороне клиента сформирован макрос |" + nmTerm); End;
+    Message("Подождите, идет вывод данных в MS Excel"); TestEvent();
+    CallRemoteRsl(nmTerm); 
+    lgDelFile(nmTerm);
+    Message(""); TestEvent();
+
+    FlagShow = True;
+  END;
+  /* --------------------------------------------------------- */
+  MACRO Destructor()
+    If (Not FlagShow) Show(); End;
+  END;
+  /* --------------------------------------------------------- */
+  Init(p_UseExistActiveX);
+
+END;    
+
+CLASS CFastWord(p_UseExistActiveX)
+  Var nm, str, FlagShow, OldOutput;
+  Var FullName;
+  Var Visible;
+
+  /* ------------------------------------------------------ */
+  MACRO Init(p_UseExistActiveX)
+    Var tm = StrSubSt(String(Time(), ":", ""));
+    nm = String("rtf", _objRef, "_", tm, UserNumber(), "_", {Oper}:o:4, ".mac");           /* Определим имя терминального макроса            */
+    FullName = _Rs4UsersTRB +"TEMPFILE\\" + nm;
+    _objRef  = _objRef + 1;
+    OldOutput = SetOutput(FullName, False);                              /* Переключим консоль ввода-вывода на этот макрос */
+    If (p_UseExistActiveX == Null) p_UseExistActiveX = False; End;       /* Если параметр не определен, создавать новый экземпляр Excel */
+
+    println("Var lg = ActiveX(\"Word.Application\", Null, ", String(p_UseExistActiveX), ");");
+    SetOutput(OldOutput, True);
+    str = "";
+    FlagShow = False;
+    Visible = Null;
+  END;
+
+  MACRO AddLg
+    If (Index(Trim(StrUpr(str), "lg"))!=1) str = "lg" + str; End;
+  END;
+  /* ------------------------------------------------------ */
+  MACRO Correct(p_Str)
+    Var ss = Trim(p_Str);
+    If (SubStr(ss, StrLen(ss))!=";") ss = ss + ";" End;
+    Return ss;
+  END;
+
+  MACRO OutStr(p_Str)
+    OldOutput = SetOutput(FullName, True);
+    If (p_Str != Null) str = p_Str; End;
+    AddLg;
+    str = Correct(str);
+    println(str);
+    str = "";
+    SetOutput(OldOutput, True);
+  END;  
+
+  MACRO ToStr(p_Str)
+    Var ss = StrSubSt(p_Str, "\\", "\\\\");
+    ss = StrSubSt(ss, StrFor(34), "\\" + StrFor(34));
+    Return StrFor(34) + ss + StrFor(34);
+  END;
+
+  MACRO SetVisible()             
+     str=str+".Visible="+String(Visible);
+     Visible=Null;
+     OutStr();
+  END;
+
+  MACRO Postpone()
+    If (Visible != Null) SetVisible(); End;
+  END;
+  
+  /* Куски */
+  MACRO Documents()       Postpone();   str = str + ".Documents";                             Return this;    END;
+  MACRO ActiveDocument()  Postpone();   str = str + ".ActiveDocument";                        Return this;    END;
+  MACRO FormFields(s)     Postpone();   str = str + ".FormFields(\""+s+"\")";                 Return this;    END; 
+  MACRO Tables(number)    Postpone();   str = str + ".Tables("+number+")";                    Return this;    END; 
+  MACRO Selection()       Postpone();   str = str + ".Selection";                             Return this;    END;
+
+  /* Хвосты */
+  MACRO Open(p_FileName)  Postpone();   OutStr(str + ".Open(" + ToStr(p_FileName) + ")");                     END;
+  MACRO Select()          Postpone();   OutStr(str + ".Select");                                              END;  
+  MACRO Result(s)         Postpone();   OutStr(str + ".Result="+ToStr(s));                                    END;
+  MACRO TypeText(s)       Postpone();   OutStr(str + ".TypeText(" + strsubst(ToStr(s),StrFor(10)," ") + ")"); END;
+  MACRO MoveRight(number) Postpone();   OutStr(str + ".MoveRight(" + number + ")");                           END;
+  MACRO MoveDown(n1,n2)   Postpone();   OutStr(str + ".MoveDown("+n1+","+n2+")");                             END;
+ 
+ 
+  MACRO Show()
+    Postpone();
+    Var nmTerm = lgGetCWD + "\\" + nm;
+    Var nmServ = _Rs4UsersOsb + "TxtFile\\" + nm;
+
+    SetOutput(Null, True);
+    If (Not dcCopyFile(FullName, nmServ)) 
+      MsgBox("1. Ошибка копирования " + FullName + " в " + nmServ);
+      Return False;
+    End;
+    dcDelFile(FullName);
+    
+    If (Not lgTermTerm(nmServ, nmTerm))
+      MsgBox("2. Ошибка копирования " + nmServ + " в " + nmTerm);
+      Return False;
+    End;
+    lgDelFile(nmServ);
+
+    If (kvnIsAdmin()) MsgBox("На стороне клиента сформирован макрос |" + nmTerm); End;
+    Message("Подождите, идет вывод данных в MS Word"); TestEvent();
+    CallRemoteRsl(nmTerm); 
+    lgDelFile(nmTerm);
+    Message(""); 
+    TestEvent(); 
+    FlagShow = True;
+  END;
+
+  MACRO Destructor
+    If (Not FlagShow) Show(); End;
+  END;
+
+  Init();
+END;
+
+
+CLASS CFieldList()
+  Var ActiveDocumentName = "", aFormFields = TArray;
+
+
+  // ------------------------------------------------------------------------------
+  MACRO FillArray4FindWordField(p_ActiveDocument)
+    Var i, cnt;
+
+    If (p_ActiveDocument.Name != ActiveDocumentName)
+      cnt = p_ActiveDocument.FormFields.Count;
+      aFormFields.Size = cnt+1;
+      i = 1;
+      While (i<=cnt)
+        aFormFields[i] = p_ActiveDocument.FormFields(i).Name;
+        i = i + 1;
+      End;
+      ActiveDocumentName = p_ActiveDocument.Name;
+    End;
+  END;
+  // ------------------------------------------------------------------------------
+  // Проверяем наличие поля p_FieldName в активном документе Word p_ActiveDocument
+  // Возвращает True, если поле найдено
+  MACRO FindWordField(p_ActiveDocument, p_FieldName)
+    Var i = 1;
+
+    FillArray4FindWordField(p_ActiveDocument);
+
+    While (i<aFormFields.Size)
+      If (aFormFields[i] == p_FieldName)
+        Return True;
+      End;
+      i = i + 1;
+    End;
+    Return False;
+  END;
+  // ------------------------------------------------------------------------------
+  // Проверяем наличие поля p_FieldName. 
+  // Если поле найдено, подставляем в него значение p_NewValue 
+  // Если поле не найдено, то не валимся с ошибкой!!!
+  // Возвращает True, если поле найдено
+  MACRO SetWordField(p_ActiveDocument, p_FieldName, p_NewValue)
+    Var i = 1;
+
+    FillArray4FindWordField(p_ActiveDocument);
+
+    While (i<aFormFields.Size)
+      If (aFormFields[i] == p_FieldName)
+        p_ActiveDocument.FormFields(i).Result = p_NewValue;
+        Return True;
+      End;
+      i = i + 1;
+    End;
+    Return False;
+  END;
+END;
+
+Var sysWord = CFieldList;
