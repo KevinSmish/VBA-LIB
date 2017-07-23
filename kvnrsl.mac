@@ -1,0 +1,1583 @@
+/* ╔═════════════════════════════════════════════════════════════════════════════════════╗ */
+/* ║ БИБЛИОТЕКА РАСШИРЕНИЙ ЯЗЫКА RSL                                                     ║ */
+/* ║ РАЗРАБОТЧИК В.Н.КОЗУЛИН                                                             ║ */
+/* ╚═════════════════════════════════════════════════════════════════════════════════════╝ */
+
+Import 
+  BankInter, rsexts, "lgs.d32", "doctor.d32";
+
+CLASS TkvnRSL()
+
+  /*
+    ЧАСТЬ 1. ФУНКЦИИ РАБОТЫ СО СТРОКАМИ
+    -----------------------------------------------------------------------------------------
+    MACRO ToLen(cStr, cLen, cSymb, cLeft);         /* Режем/добиваем строку слева/справа   */
+    MACRO ToLenCenter(cStr, cLen, cSymb);          /* Центрируем строку по заданной ширине */
+    MACRO PadL(cStr, cLen, cSymb)                  /* Режем/добиваем слева                 */
+    MACRO PadR(cStr, cLen, cSymb)                  /* Режем/добиваем справа                */
+    MACRO PadС(cStr, cLen, cSymb)                  /* Добавляем по центру                  */
+    MACRO Right(pStr, pLen);                       /* Часть строки справа                  */
+    MACRO SeekAndSplit(cString, cTag, cBefore, cAfter); /* Найти и разрезать по тагу       */
+    MACRO SplitToArray(cStr, arr, cChr);           /* Режем текст на строки массива        */
+    MACRO GetArraySize(vArr)                       /* Вычисляем размер Array или TArray    */
+    MACRO GetMaxLenInArray(vArr)                   /* Ищем самую длинную строку в массиве  */
+    MACRO FindInArray(vArr, vEl);                  /* Ищем элемент массива. Возр.инд.или -1*/
+    MACRO FindLikeInArray(vArr, vEl);              /* Ищем ПОХОЖИЙ эл-т мас.Возр.инд.или -1*/
+    MACRO IsDigit(Ch)                              /* Является ли текущий символ цифрой?   */
+    MACRO IndexRight(cWhere, cWhat)                /* Index справа                         */
+    MACRO Swap(a,b)
+    MACRO SortArray(arr,Asc,arr1,arr2)
+    MACRO VerifyValToType(val, type)               /* Можно ли привести val к типу type    */
+    MACRO Tirage(cSym, cCount)                     /* Повторить символ cCount раз          */
+    MACRO IsInt(pStr);                             /* Является ли строка числом            */
+    MACRO IsDate(pStr)                             /* Является ли параметр датой           */
+    MACRO ToDate(pStr)                             /* Преобразует параметр в дату          */ 
+    MACRO ValToType(val, type);                    /* Преобразуем val к типу type          */
+    MACRO ValToTypeValSource(val, ValSource);      /* Привести val к ValType(ValSource)    */
+    MACRO IsNull(v);                               /* Более корректная проверка на Null    */
+    MACRO ConvertToOldTableName(p_NewName)         /* Преобразуем имя Oracle (60) -> .dbt  */
+    MACRO ConvertToNewTableName(p_OldName)         /* Преобразуем имя .dbt -> Oracle (60)  */
+    MACRO menu1(arr, prompt, head, x, y, n);       /* Меню с возможностью поиска           */
+    MACRO AddToEmpty(p_str, p_sym);                /* Добавить символы к непустой строке   */
+    MACRO nvl(statement, p_null);
+    MACRO GetLatinSymb(vKeyCode);
+    macro OEM2Char(WinChar)
+    macro Char2OEM(DosChar)
+    macro Win2Dos(s)
+    macro Dos2Win(s)
+    MACRO ReMakeBalAcc(p_BalAcc);
+    MACRO FIO2FamIO(p_FIO);                        /* Фамилия Имя Отчество -> Фамилия И.О. */
+    MACRO kvnToIntLeft(p_str)                      /* Берем символы справа пока цифры      */
+    MACRO MultiSelect(p_arr, ret_Arr, prompt, head, x, y)
+    MACRO Inc(cCount)
+    MACRO FormatString(cFormat);
+    MACRO PrintArray(cArr)
+
+    ЧАСТЬ 2. ФУНКЦИИ РАБОТЫ С ДАТАМИ И ВРЕМЕНЕМ
+    -----------------------------------------------------------------------------------------
+    MACRO FirstDayOfMonth(cDate);                  /* Находим первый день месяца           */
+    MACRO LastDayOfMonth(cDate);                   /* Последний день месяца                */
+    MACRO FirstDayOfYear(cDate);                   /* Первый день года                     */
+    MACRO GetDayName(nn)                           /* Наименования дня недели              */
+    MACRO GetDayOfWeek(Дата)                       /* Номер дня недели                     */
+    MACRO MonthToStrRodit(cMonth)                  /* Названия месяца в родит. падеже      */
+    MACRO MonthToStrImen(cMonth)                   /* Названия месяца в именит. падеже     */
+    MACRO Year(pDay)                               /* Год указанной даты                   */
+    MACRO GetKvartal(ddate, retDateBeg, retDateEnd);
+    MACRO DateAdd(p_Date, p_Day, p_Month, p_Year); /* Увеличить (уменьшить) дату           */
+
+    ЧАСТЬ 3. ФУНКЦИИ ВЫЗОВА ПРОЦЕДУР И ОПЕРАТОРНЫЕ РАСШИРЕНИЯ ЯЗЫКА
+    -----------------------------------------------------------------------------------------
+    MACRO iif(pCond, pTrue, pFalse)                /* Стандартная функция IIF              */
+    MACRO ArgEQ(pArgCmp);                          /* Сравниваем I арг-т с последующими    */
+    MACRO CallForArray(FuncName, a);               /* Вызов функции с арг-тами из массива  */
+    MACRO CallMethodForArray(obj, FuncName, a);    /* Вызов метода с арг-тами из массива   */
+
+    ЧАСТЬ 4. РЕКУРСИВНАЯ ОБРАБОТКА КАТАЛОГОВ
+    -----------------------------------------------------------------------------------------
+    MACRO UpDir(ss)                                /* Имя вышестоящего каталога            */
+    MACRO BuildDirPath(ss);                        /* Добавляем конечный слэш, если нужно  */
+    MACRO DelSub(CurDirIn, Name, IsDir, Prohod, DirIn, DirOut, cReplace) /* Подмакрос удал. файлов директории  */  
+    MACRO MakeDir(name, OnServer)
+    MACRO FindFile(name, OnServer);
+    MACRO IsLockForWrite(name, OnServer)
+    MACRO rslDelFile(name, OnServer)
+    MACRO rslRenameFile(OldName, NewName, OnServer)
+    MACRO ServToTerm(InName,OutName,Progr, cSize);
+    MACRO CopySub(CurDirIn, Name, IsDir, Prohod, DirIn, DirOut, cReplace, cSize) /* Подмакрос копир. ф-лов директ.*/
+    MACRO kvnDir(DirIn,DirOut,MyFunc,cReplace);
+    MACRO DelDir(name);
+    MACRO CopyDir(NameIn, NameOut, cReplace);
+  */
+  /* ------------------------------------------------------------------------------------- */
+  MACRO ToLen(cStr, cLen, cSymb, cLeft);           /* Режем/добиваем строку слева/справа   */
+    Private Var s, vLen;
+
+    If (cStr == Null) cStr = ""; End; 
+
+    s    = String(cStr);
+    vLen = StrLen(s);
+
+    If (vLen>cLen)    Return SubStr(s, 1, cLen); End;
+    If (vLen == cLen) Return cStr;               End; 
+
+    If (cSymb==Null) cSymb = " "; End; 
+    If ((cLeft==Null) Or (cLeft == True))
+      While (vLen<cLen) 
+        cStr = cSymb + cStr;
+        vLen = vLen + 1;
+      End;
+    Else
+      While (vLen<cLen) 
+        cStr = cStr + cSymb;
+        vLen = vLen + 1;
+      End;
+    End;
+    Return cStr;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO ToLenCenter(cStr, cLen, cSymb);            /* Центрируем строку по заданной ширине */
+    Private Var s = ToLen(cStr, (cLen+StrLen(cStr))/2, cSymb, False);
+    Return ToLen(s, cLen, cSymb);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO PadL(cStr, cLen, cSymb)                    /* Режем/добиваем слева                 */
+    Return ToLen(cStr, cLen, cSymb, True);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO PadR(cStr, cLen, cSymb)                    /* Режем/добиваем справа                */
+    Return ToLen(cStr, cLen, cSymb, False);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+                     /*          Добавляем по центру*/
+  macro PadC(cStr,nN,cSmb)
+  var cS1,cS2,cS=cStr;
+    if (cSmb==null) cSmb=" ";end;
+    if (nN>StrLen(cStr))
+      cS1=MkStr(cSmb,int((nN-strlen(cStr))/2));
+      cS2=MkStr(cSmb,nN-Strlen(cStr)-strlen(cS1));
+      cS=cS1+cStr+cS2;
+    end;
+    return(cS);
+  end;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO Right(pStr, pLen);                         /* Часть строки справа                  */
+    Var vLen = StrLen(pStr),
+        i;
+    
+    If (vLen<=pLen) Return pStr; End;
+    Return SubStr(pStr, vLen-pLen+1);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO SeekAndSplit(cString, cTag, cBefore, cAfter); /* Найти и разрезать по тагу         */
+    Var str = String(cString);
+    Var i   = Index(str, cTag);
+
+    If (i==0)
+      SetParm(2, "");               /* cTag    */
+      SetParm(3, str);              /* cBefore */
+      SetParm(4, "");               /* cAfter  */
+    Else
+      SetParm(3, SubStr(str, 1, i-1));
+      SetParm(4, SubStr(str, i+StrLen(cTag)));
+    End;
+
+    Return i;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO SplitToArray(cStr, arr, cChr);             /* Режем текст на строки массива        */
+    Var i   = 0, 
+        j   = -1,
+        len = StrLen(cStr),                        /* Длина текста                         */
+        cC  =cStr;                                 /* Это вся строка                       */
+
+    arr.Size = 0;
+
+    If ( cChr==Null ) cChr = "\n"; End;            /* Если символ разделитель не указан    */
+
+    While (i<len)                                  /* Бежим по символам                    */
+      cC = SubStr(cC, i+1);                        /* Остаток строки                       */
+      i  = StrBrk(cC,cChr);                        /* Пытаемся найти совпадения            */
+      if (i==0) i = len + 1; end;                  /* Совпадений не найдено. На выход      */
+      If (cC!="Undefined")
+        arr[j=j+1] = SubStr(cC,1,i-1);             /* Начало строки до символа разделителя */
+      End;
+    End;
+    Return j;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO GetArraySize(vArr, p_NewValue)             /* Вычисляем размер Array или TArray    */
+    Var ret = 0;
+    If (ValType(vArr) == 15)                       /* Ясно и ежу: ValType(V_ARRАY) = 15    */
+      ret = ASize(vArr);                           /* Размер массива определим ч/з ASize   */
+      If (p_NewValue != Null)
+        ASize(vArr, p_NewValue);    
+      End;
+    ElIf (ValType(vArr) == 19)                     /* ValType(TArray) = 19                 */
+      ret = vArr.Size;
+      If (p_NewValue != Null)
+        vArr.Size = p_NewValue;
+      End;
+    End;              
+    Return ret;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO GetMaxLenInArray(vArr)                     /* Ищем самую длинную строку в массиве  */
+    Var i      = 0,                             
+        MaxLen = 0;
+
+    While ( i<GetArraySize(vArr) )              /* Бежим по массиву, пока он есть       */
+      If ( StrLen(vArr[i])>MaxLen ) MaxLen = StrLen(vArr[i]); End;/* У нас новый лидер*/
+      i = i + 1;                                   /* Дальше, дальше, дальше...            */
+    End;
+    Return MaxLen;                                 /* Возвращаем лидера                    */
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO FindInArray(vArr, vEl);                    /* Ищем элемент массива. Возр.инд.или -1*/
+    Var i = 0;
+
+    While ( i<GetArraySize(vArr) )                 /* Бежим по массиву, пока он есть       */
+      If ( vArr[i] == vEl) Return i; End;          /* Ура! элемент найден                  */
+      i = i + 1;                                   /* Дальше, дальше, дальше...            */
+    End;
+    Return -1;                                     /* Я совсем ничего не принес...(С) Заяц */
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO FindLikeInArray(vArr, vEl);                /* Ищем ПОХОЖИЙ эл-т мас.Возр.инд.или -1*/
+    Var i = 0;
+
+    vEl = StrUpr(vEl);
+    While ( i<GetArraySize(vArr) )                 /* Бежим по массиву, пока он есть       */
+      If (Index(StrUpr(vArr[i]), vEl)>0) Return i; End;    /* Ура! Похожий элемент найден          */
+      i = i + 1;                                   /* Дальше, дальше, дальше...            */
+    End;
+    Return -1;                                     /* Я совсем ничего не принес...(С) Заяц */
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO IsDigit(Ch)                                /* Является ли текущий символ цифрой?   */
+    Return ((Ch>="0") And (Ch<="9"));
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO IndexRight(cWhere, cWhat)                  /* Index справа                         */
+    Var lnWhere = StrLen(cWhere);
+    Var lnWhat  = StrLen(cWhat);
+    Var i       = lnWhere - lnWhat + 1;
+    While (i>0)
+      If (SubStr(cWhere, i, lnWhat)==cWhat)
+        Return i;
+      End;
+      i = i - 1;
+    End;
+    Return i;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO Swap(a,b)
+    Var swp = a;
+    SetParm(1,b);
+    SetParm(2,swp);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO SortArray(arr,Asc,arr1,arr2)
+    Var i = 0, ok = True;
+                        
+    While (ok)
+      ok = False;
+      i = 0;
+      While (i<arr.Size-1)
+        If (arr[i]>arr[i+1])
+          Swap(arr[i],arr[i+1]);
+          If (arr1!=Null) Swap(arr1[i],arr1[i+1]); End;
+          If (arr2!=Null) Swap(arr2[i],arr2[i+1]); End;
+          ok = True;
+        End;
+        i = i + 1;
+      End;
+    End;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO VerifyValToType(val, type)
+    Var newval, sval, ln;
+    Var dd, mm, yy;
+
+    If (ValType(val)==type) Return True; End;
+
+    sval = String(val);
+    If (type==V_INTEGER)
+      newval = String(Int(val));
+    ElIf (type==V_DOUBLE)
+      newval = String(Double(val)); ln = StrLen(newval);
+      If (Index(sval, ".")==0) sval = sval + "."; End;
+      While (StrLen(sval)<ln)  sval = sval + "0"; End;
+    ElIf (type==V_MONEY)
+      newval = String(Money(val)); ln = StrLen(newval);
+      If (Index(sval, ".")==0) sval = sval + "."; End;
+      While (StrLen(sval)<ln)  sval = sval + "0"; End;
+    ElIf (type==V_DATE)
+      sval = StrSubst (sval, "//", ".");
+      DateSplit(Date(sval), dd, mm, yy);
+      newval = String(dd:o:2, ".", mm:o:2, ".", yy:o:4);
+    Else
+      newval = val;
+    End;
+    Return (newval==sval);
+
+    ONERROR(x)
+      Return False;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO Tirage(cSym, cCount)
+    Var s = cSym, cnt = cCount-1;
+    While (cnt>0)
+      s = s + cSym;
+      cnt = cnt - 1;
+    End;
+    Return s;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO IsInt(pStr);                               /* Является ли строка числом            */
+    Var vCh, vStr, i;
+
+    If (ValType(pStr)==V_INTEGER) Return True;  End; /* Это уже число                      */
+    If (ValType(pStr)!=V_STRING)  Return False; End; /* Не строка. Не будем и пытаться     */   
+    If (pStr == "")               Return False; End; /* Строка-то пустая...                */
+
+    vStr = Trim(pStr);
+    If (StrLen(vStr)==0) Return False; End;
+    i = 1;                                         /* С первого символа                    */
+    While (i<=StrLen(vStr))                        /* Бежим до последнего                  */
+      vCh = CodeFor(SubStr(vStr, i, 1));           /* Код очередного символа               */
+      If ((vCh<48) Or (vCh>57)) Return False; End; /* Это не цифирь...                     */
+      i = i + 1;                                   /* Следующий символ                     */
+    End;
+    Return True;                                   /* Все в порядке                        */
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO IsDate(pStr)                               /* Является ли параметр датой           */
+    Return VerifyValToType(pStr, V_DATE);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO ToDate(pStr)                               /* Преобразует параметр в дату          */ 
+    Var newval, sval;
+    Var arr = TArray, i;
+
+    If (ValType(pStr)==V_DATE) Return pStr; End;
+    If (Trim(pStr) =="1.01.0001 (00:00:00.00)") Return Date(0, 0, 0); End; 
+
+    pStr = Trim(String(pStr));
+    i = Index(pStr, "(");
+    If ((i>0) And (Index(pStr,")")>0))
+      pStr = SubStr(pStr, 1, i-1);
+    End;
+
+    sval = StrSubst(String(pStr), "//", ".");
+    sval = StrSubst(String(sval), "-",  ".");
+
+    i = SplitToArray(sval, arr, ".");
+
+    If (i==2) 
+
+      arr[2] = int(arr[2]);
+      If (arr[2]<85)  arr[2] = arr[2] + 2000; End;
+      If (arr[2]<100) arr[2] = arr[2] + 1000; End;
+
+      arr[0] = int(arr[0]);
+      arr[1] = int(arr[1]);
+      If ((arr[0]==0) Or (arr[1]==0))
+        Return Date(0, 0, 0);
+      End;
+
+      Return Date(arr[0], arr[1], arr[2]);
+    End;
+    Return Date(0, 0, 0);
+
+    ONERROR(x)
+      Return Date(0, 0, 0);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO ValToType(val, type);                      /* Преобразуем val к типу type          */
+    If (ValType(val)==type)    Return val;                End;
+    If (ValType(val)==V_UNDEF) Return val;                End;
+
+    If (type == V_UNDEF      ) Return val;                End;                                      /*  0 */
+    If (type == V_INTEGER    ) Return Int(val);           End;                                      /*  1 */
+    If (type == V_MONEY      ) Return Money(val);         End;                                      /*  2 */
+    If (type == V_DOUBLE     ) Return Double(val);        End;                                      /*  3 */
+    If (type == V_MONEYL     ) Return Moneyl(val);        End;                                      /*  4 */
+    If (type == V_DOUBLEL    ) Return Doublel(val);       End;                                      /*  5 */
+    If (type == V_STRING     ) Return String(val);        End;                                      /*  6 */
+    If (type == V_BOOL       ) If (Trim(String(val))=="") Return False; Else Return True; End; End; /*  7 */
+    If (type == V_DATE       ) Return ToDate(val); End;                                             /*  9 */
+    Return val;
+
+    ONERROR(x)
+      Return Null;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO ValToTypeValSource(val, ValSource);        /* Привести val к ValType(ValSource)    */
+    Var TypeValSource = ValType(ValSource);
+
+    If (TypeValSource==V_STRING)
+      If (ValSource == "V_UNDEF"  ) Return ValToType(val, V_UNDEF  ); End;                      /*  0 */
+      If (ValSource == "V_INTEGER") Return ValToType(val, V_INTEGER); End;                      /*  1 */
+      If (ValSource == "V_MONEY"  ) Return ValToType(val, V_MONEY  ); End;                      /*  2 */
+      If (ValSource == "V_DOUBLE" ) Return ValToType(val, V_DOUBLE ); End;                      /*  3 */
+      If (ValSource == "V_MONEYL" ) Return ValToType(val, V_MONEYL ); End;                      /*  4 */
+      If (ValSource == "V_DOUBLEL") Return ValToType(val, V_DOUBLEL); End;                      /*  5 */
+      If (ValSource == "V_STRING" ) Return ValToType(val, V_STRING);  End;                      /*  6 */
+      If (ValSource == "V_BOOL"   ) Return ValToType(val, V_BOOL);    End;                      /*  7 */
+      If (ValSource == "V_DATE"   ) Return ValToType(val, V_DATE);    End;                      /*  9 */
+    End;
+    Return ValToType(val, TypeValSource);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO IsNull(p_Object);                          /* Более корректная проверка на Null    */
+    Private Var s = Trim(String(p_Object));
+
+    If ((s==Null) Or (s=="")) 
+      Return True
+    End;
+    If ((ValType(p_Object)==V_DATE) And (p_Object==Date(0, 0, 0)))
+      Return True
+    End;
+    If (ValType(p_Object)==V_UNDEF)
+      Return True
+    End;
+    If (GenClassName (p_Object) == "TRecord")
+      Return (False);
+    End;
+
+    Return False;
+
+    ONERROR(x)
+      Return False;
+  END;
+  /* ------------------------------------------------------------------------------------- */  
+  MACRO ConvertToOldTableName(p_NewName)           /* Преобразуем имя Oracle (60) -> .dbt  */
+    Var str = StrUpr(Trim(p_NewName));
+    Var ln  = StrLen(str);
+    Var t   = Index(str, "_DBT");
+
+    If ((SubStr(str, 1, 1)=="D") And (t>0) And (ln-t==3))
+      Return SubStr(p_NewName, 2, ln-5) + ".DBT";
+    End;
+    Return p_NewName;
+  END;
+  /* ------------------------------------------------------------------------------------- */  
+  MACRO ConvertToNewTableName(p_OldName)           /* Преобразуем имя .dbt -> Oracle (60)  */
+    Var str = StrUpr(Trim(p_OldName));
+    Var ln  = StrLen(str);
+    Var t   = Index(str, ".DBT");
+
+    If ((t>0) And (ln-t==3))
+      Return "D" + SubStr(p_OldName, 1, ln-4) + "_DBT";
+    End;
+    Return p_OldName;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO menu1(arr, prompt, head, x, y, n);         /* Меню с возможностью поиска           */
+    Private Var 
+      aMnu = TArray, 
+      ch   = 0     , 
+      str  = ""    , 
+      idx  = n     , 
+      i    = 0     ;
+
+    If (idx!=Null) idx = idx + 1; End;
+
+    aMnu.Size = 0;
+    aMnu[0] = "НАЙТИ ПУНКТ МЕНЮ";
+
+    While (i<arr.Size)
+      aMnu[aMnu.Size] = String(arr[i]);
+      i = i + 1;
+    End;
+
+    While (ch == 0)
+      ch = Menu(aMnu, prompt, head, x, y, idx);
+      If (ch == 0)
+        If (GetString(str, "Введите значение для поиска"))
+          idx = FindLikeInArray(aMnu, str);
+          If (idx<0) idx = 0; MsgBox("Значение не найдено!"); End;
+        End;
+      End;
+    End;
+    Return ch-1;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO AddToEmpty(p_str, p_sym);                  /* Добавить символы к непустой строке   */
+    If ((p_str!=Null) And (p_str!=""))
+      Return String(p_str, p_sym);
+    End;
+    Return p_str;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO nvl(statement, p_null);
+    If (statement == Null) 
+      Return p_null;
+    End;
+    Return statement;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO GetLatinSymb(vKeyCode)
+    Var Symb = StrUpr(StrFor(vKeyCode));
+    Var idx;
+
+    If (vKeyCode<65)  Return ""; End;
+    If (vKeyCode>239) Return ""; End;
+
+    Private Const vRus = "ЙЦУКЕНГШЩЗФЫВАПРОЛДЯЧСМИТЬ";
+    Private Const vLat = "QWERTYUIOPASDFGHJKLZXCVBNM";
+
+    idx = Index(vRus, Symb);
+    If (idx>0) Return SubStr(vLat, idx, 1); End;
+
+    Return Symb;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  macro OEM2Char(WinChar)
+    var DosN, WinN;
+    WinN = CodeFor(WinChar);
+    if ((WinN > 175) and (WinN < 192))
+      DosN = WinN + 64;
+    elif ((WinN > 191) and (WinN < 240))
+      DosN = WinN - 64;
+    elif ((WinN > 239) and (WinN < 256))
+      DosN = WinN - 16;
+    else
+      DosN = WinN;
+    end;
+    Return StrFor(DosN);
+  end; /* OEM2Char */
+  /* ------------------------------------------------------------------------------------- */
+  macro Char2OEM(DosChar)
+    var DosN, WinN;
+    DosN = CodeFor(DosChar);
+    if ((DosN > 127) and (DosN < 176))
+      WinN = DosN + 64;
+    elif ((DosN > 223) and (DosN < 240))
+      WinN = DosN + 16;
+    else
+      WinN = DosN;
+    end;
+    Return StrFor(WinN);
+  end; /* Char2OEM */
+  /* ------------------------------------------------------------------------------------- */
+  macro Win2Dos(s)
+    var i = 1, ss = "";
+    While ( i <= StrLen(s) )
+      ss = ss + OEM2Char(SubStr(s,i,1));
+      i = i + 1;
+    end;
+    Return ss;
+  end; /* Win2Dos */
+  /* ------------------------------------------------------------------------------------- */
+  macro Dos2Win(s)
+    var i = 1, ss = "";
+    While ( i <= StrLen(s) )
+      ss = ss + Char2OEM(SubStr(s,i,1));
+      i = i + 1;
+    end;
+    Return ss;
+  end; /* Dos2Win */
+  /* ------------------------------------------------------------------------------------- */
+  MACRO ReMakeBalAcc(p_BalAcc);
+    Var 
+      ret = Trim(p_BalAcc), 
+      ln = StrLen(ret)    ; 
+    If (ln>5)
+      Return SubStr(ret, 1, 5) + "." + SubSTr(ret, 6);
+    End;
+    Return ret;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO FIO2FamIO(p_FIO);                          /* Фамилия Имя Отчество -> Фамилия И.О. */
+    Var arr = TArray;
+    If (SplitToArray(p_FIO, arr, " ")!=2)
+      Return p_FIO;
+    End;
+    Return String(arr[0], " ", SubStr(arr[1], 1, 1), ".", SubStr(arr[2], 1, 1), ".");
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO kvnToIntLeft(p_str)                        /* Берем символы справа пока цифры      */
+    Var 
+      i  = 1            , 
+      ln = StrLen(p_str), 
+      st                ;
+
+    While ((i<=ln) And (IsDigit(SubStr(p_str, i, 1))))
+      i = i + 1;
+    End;
+
+    st = SubStr(p_str, 1, i-1);
+    /*If ((st!=Null) And (st!="")) st = Int(st); End;*/
+    Return st;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO GetDigitsForce(p_Str)
+    Var i = 1, ln = StrLen(p_Str), ret = "";
+    While ((i<=ln) And (Not IsDigit(SubStr(p_Str, i, 1))))                                  i = i + 1; End;
+    While ((i<=ln) And (    IsDigit(SubStr(p_Str, i, 1)))) ret = ret + SubStr(p_Str, i, 1); i = i + 1; End;
+
+    If (StrLen(ret)>0) Return Int(ret); End; 
+    Return 0;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO MultiSelect(p_arr, ret_Arr, prompt, head, x, y)
+    Var                                            /* Множественный выбор                  */
+      FlagSel = True  , 
+      i       = 0     , 
+      j               , 
+      cnt     = 0     , 
+      arr     = TArray;
+
+    GetArraySize(ret_Arr, GetArraySize(p_arr));
+
+    i = 0;
+    While (i<GetArraySize(p_arr))
+      If (ret_Arr(i) == Null)
+        ret_Arr(i) = False;
+      End;
+      If (ret_Arr(i))
+        arr[i]     = "[√] " + p_arr(i);
+        cnt        = cnt + 1;
+      Else
+        arr[i]     = "[ ] " + p_arr(i);
+      End;
+      i = i + 1;
+    End;
+    If (cnt == arr.Size) FlagSel = False; End;
+
+    arr[arr.Size] = "Отметить все / Снять отметку со всех";
+    arr[arr.Size] = "Принять";
+    If (head == Null) head = "Множественный выбор элементов"; End;
+
+    i = 0;
+    While (i>=0)
+      //Menu ( array [, prompt] [, head] [, x] [, y] [, n] )
+      i = menu(arr, prompt, head, x, y, i);
+      If (i == arr.Size-2)
+        j = 0;
+        While (j<ret_Arr.Size)
+          ret_Arr(j) = FlagSel;
+          If (FlagSel)
+            arr[j]     = "[√] " + p_arr(j);
+          Else
+            arr[j]     = "[ ] " + p_arr(j);
+          End;
+          j = j + 1;
+        End;
+        FlagSel = Not FlagSel;
+      ElIf (i == arr.Size-1)
+        Return True;
+      ElIf (i>=0)
+        If (SubStr(arr(i), 2, 1)==" ")
+          ret_Arr(i) = True;
+          arr[i]     = "[√] " + p_arr(i);
+        Else
+          ret_Arr(i) = False;
+          arr[i]     = "[ ] " + p_arr(i);
+        End;
+      End;
+    End;
+    Return False;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO Inc(cCount, pInc)                          /* cCount++                             */
+    If (pInc == Null) pInc = 1; End;
+    SetParm(1, cCount + pInc);
+    Return cCount;
+  END;
+
+Var aFormat = TArray, OldFormat, cntFormat;
+
+  /* ------------------------------------------------------------------------------------- */
+  MACRO FormatString(cFormat);                     /* Форматируем строку                   */
+    Var 
+      aRet      = TArray, 
+      idxRet            , 
+      aData     = TArray, 
+      aDataParm = TArray, 
+      idxData           , 
+      idxFormat         , 
+      idxParm, valParm  , 
+      idx, OldSym, CurSym         , 
+      str                         , 
+      i                           , 
+      ok;
+
+    /* ----------------------------------------------------------------------------------- */
+    PRIVATE MACRO AddParam(p_valParm)
+      Var UprValParm = StrUpr(p_valParm);
+      If ((UprValParm == "\L") Or 
+          (UprValParm == "\C") Or 
+          (UprValParm == "\R") Or
+          (UprValParm == "\W")
+         )
+        aDataParm[idxData] = UprValParm;
+      Else
+        idxData=idxData+1;
+        aData[idxData] = String(p_valParm);
+        If (ValType(p_valParm) == V_STRING)
+          aDataParm[idxData] = "\R";
+        Else
+          aDataParm[idxData] = "\L";
+        End;
+      End;
+    END;
+    aRet.Size = 0; 
+    /* ----------------------------------------------------------------------------------- */
+    idxData =  -1; idxParm = 2;
+    While (GetParm(idxParm, valParm))
+      If (ValType(valParm) == 19)
+        i = 0;
+        While (i<valParm.Size)
+          AddParam(valParm[i]);
+          i = i + 1;
+        End;
+      Else
+        AddParam(valParm);
+      End;
+      idxParm = idxParm + 1;
+    End;
+    /* ----------------------------------------------------------------------------------- */
+    If (OldFormat != cFormat)
+      OldFormat = cFormat;
+      idxFormat = -1; cntFormat = 0;
+      idx = 1; OldSym = Null; 
+      While (idx<=StrLen(cFormat))
+        CurSym = SubStr(cFormat, idx, 1);
+        If (OldSym != "#")
+          If (CurSym == "#")
+            cntFormat = cntFormat + 1;
+            aFormat[idxFormat=idxFormat+1] = 1;
+          Else
+            If (OldSym == Null) idxFormat = idxFormat + 1; aFormat[idxFormat] = ""; End;
+            aFormat[idxFormat] = aFormat[idxFormat] + CurSym;
+          End;
+        Else
+          If (CurSym == "#")
+            If (OldSym == Null) aFormat[idxFormat] = 0; End;
+            aFormat[idxFormat] = aFormat[idxFormat] + 1;
+          Else
+            aFormat[idxFormat=idxFormat+1] = CurSym;
+          End;
+        End;
+        OldSym = CurSym;
+        idx = idx + 1;
+      End;
+    End;
+    /* ----------------------------------------------------------------------------------- */
+    If (aData.Size < cntFormat)
+      aData.Size     = cntFormat;
+      aDataParm.Size = cntFormat;
+    End;
+    /* ----------------------------------------------------------------------------------- */
+    ok = True; idxRet = -1;
+    While (ok)
+      ok = False;
+      idxRet = idxRet + 1; aRet[idxRet] = "";
+
+      idxFormat = 0; idxData = 0;
+      While (idxFormat<aFormat.Size)
+        If (ValType(aFormat[idxFormat]) == V_STRING)
+          aRet[idxRet] = aRet[idxRet] + aFormat[idxFormat];
+        Else
+          If (StrLen(aData[idxData]) <= aFormat[idxFormat])
+            str = aData[idxData]; aData[idxData] = "";
+          Else
+            str            = SubStr(aData[idxData], 1, aFormat[idxFormat]);
+            If (aDataParm[idxData] == "\W") 
+              ok = True; 
+              aData[idxData] = Trim(SubStr(aData[idxData], aFormat[idxFormat] + 1));
+            Else
+              aData[idxData] = "";
+            End;
+          End;
+
+          If (aDataParm[idxData]   == "\R") 
+            aRet[idxRet] = aRet[idxRet] + PadR(str, aFormat[idxFormat]);
+          ElIf (aDataParm[idxData] == "\L") 
+            aRet[idxRet] = aRet[idxRet] + PadL(str, aFormat[idxFormat]);
+          ElIf (aDataParm[idxData] == "\C") 
+            aRet[idxRet] = aRet[idxRet] + PadC(str, aFormat[idxFormat]);
+          ElIf (aDataParm[idxData] == "\W") 
+            aRet[idxRet] = aRet[idxRet] + PadR(str, aFormat[idxFormat]);
+          Else
+            aRet[idxRet] = aRet[idxRet] + PadR(str, aFormat[idxFormat]);
+          End;
+
+          idxData = idxData + 1;
+        End;
+        idxFormat = idxFormat + 1;
+      End;
+    End;
+//    If (aRet[idxRet] == "") aRet.Size =  aRet.Size - 1; End;
+    /* ----------------------------------------------------------------------------------- */
+    return aRet;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO PrintArray(cArr)                           /* Печатаем массив                      */
+    Var i = 0;
+    If (ValType(cArr)!=19) Return False; End;
+    While (i<cArr.Size)
+      println(cArr[i]);
+      i = i + 1;
+    End;
+    Return True;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO FirstDayOfMonth(cDate);                    /* Находим первый день месяца           */
+    Var dd, mm, yy;                                /* Переменные для разбора даты          */
+    DateSplit(cDate, dd, mm, yy);                  /* Разобрали дату на части              */
+    Return cDate - dd + 1;                         /* Возвращаем первый день месяца        */
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO LastDayOfMonth(cDate);                     /* Последний день месяца                */
+    Var dd = FirstDayOfMonth(cDate);
+    Return FirstDayOfMonth(dd+31)-1;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO FirstDayOfYear(cDate);                     /* Первый день года                     */
+    var dd,mm,yy;
+    DateSplit(cDate,dd,mm,yy);
+    Return Date(1,1,yy);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO GetDayName(nn)                             /* Наименования дня недели              */
+    If   (nn==1)
+      Return "понедельник";
+    ElIf (nn==2)
+      Return "вторник";
+    ElIf (nn==3)
+      Return "среда";
+    ElIf (nn==4)
+      Return "четверг";
+    ElIf (nn==5)
+      Return "пятница";
+    ElIf (nn==6)
+      Return "суббота";
+    ElIf (nn==7)
+      Return "воскресение";
+    End;
+    Return nn;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO GetDayOfWeek(Дата)                         /* Номер дня неедли                     */
+    Const Воскресенье = Date(26,3,2000);
+
+    Var Разница   = Abs(Дата - Воскресенье);
+    Var Результат = Разница - Int(Разница/7)*7;
+    If (Дата < Воскресенье)
+      Результат = 7 - Результат
+    End;
+    If (Результат == 0)
+      Результат = 7
+    End;
+    Return Результат
+  End;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO MonthToStrRodit(cMonth)                    /* Названия месяца в родит. падеже      */
+    While (cMonth>12) cMonth = cMonth - 12; End;
+    If   (cMonth==1)
+      Return "января";
+    ElIf (cMonth==2)
+      Return "февраля";
+    ElIf (cMonth==3)
+      Return "марта";
+    ElIf (cMonth==4)
+      Return "апреля";
+    ElIf (cMonth==5)
+      Return "мая";
+    ElIf (cMonth==6)
+      Return "июня";
+    ElIf (cMonth==7)
+      Return "июля";
+    ElIf (cMonth==8)
+      Return "августа";
+    ElIf (cMonth==9)
+      Return "сентября";
+    ElIf (cMonth==10)
+      Return "октября";
+    ElIf (cMonth==11)
+      Return "ноября";
+    ElIf (cMonth==12)
+      Return "декабря";
+    End;
+    Return cMonth;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO MonthToStrImen(cMonth)                    /* Названия месяца в именит. падеже      */
+    While (cMonth>12) cMonth = cMonth - 12; End;
+    If   (cMonth==1)
+      Return "январь";
+    ElIf (cMonth==2)
+      Return "февраль";
+    ElIf (cMonth==3)
+      Return "март";
+    ElIf (cMonth==4)
+      Return "апрель";
+    ElIf (cMonth==5)
+      Return "май";
+    ElIf (cMonth==6)
+      Return "июнь";
+    ElIf (cMonth==7)
+      Return "июль";
+    ElIf (cMonth==8)
+      Return "август";
+    ElIf (cMonth==9)
+      Return "сентябрь";
+    ElIf (cMonth==10)
+      Return "октябрь";
+    ElIf (cMonth==11)
+      Return "ноябрь";
+    ElIf (cMonth==12)
+      Return "декабрь";
+    End;
+    Return cMonth;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO Year(pDay)
+    Var dd, mm, yy;
+    DateSplit(pDay, dd, mm, yy);
+    Return yy;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  /*По дате возвращает начало и конец квартала*/
+  MACRO GetKvartal(ddate, retDateBeg, retDateEnd);
+    var mm,yy;
+    datesplit(ddate,null,mm,yy);
+
+    if ((ddate>=date(1,1,yy))and(ddate<=date(1,04,yy)-1))
+      setparm(2,date(1,1,yy));
+      setparm(3,date(1,4,yy)-1);
+    elif ((ddate>=date(1,4,yy))and(ddate<=date(1,07,yy)-1))
+      setparm(2,date(1,4,yy));
+      setparm(3,date(1,7,yy)-1);
+   elif ((ddate>=date(1,7,yy))and(ddate<=date(1,10,yy)-1))
+      setparm(2,date(1,7,yy));
+      setparm(3,date(1,10,yy)-1);
+    elif ((ddate>=date(1,10,yy))and(ddate<=date(1,1,yy+1)-1))
+      setparm(2,date(1,10,yy));
+      setparm(3,date(1,1,yy+1)-1);
+    end;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO DateAdd(p_Date, p_dd, p_mm, p_yy)          /* Увеличить (уменьшить) дату           */
+    Var 
+      dd, mm, yy, 
+      mj = TArray, 
+      add, Flag = True;
+
+     DateSplit(p_Date, dd, mm, yy);
+     dd = dd + p_dd; mm = mm + p_mm; yy = yy + p_yy;
+
+     mj[1] = 31; mj[2] = 28; mj[3] = 31; mj[4]  = 30; mj[5]  = 31; mj[6]  = 30;
+     mj[7] = 31; mj[8] = 31; mj[9] = 30; mj[10] = 31; mj[11] = 30; mj[12] = 31;
+
+     While (Flag)
+       yy = yy + Int((mm-1)/12);
+
+       mm = Mod(mm-1, 12) + 1;
+       If (mm<=0) mm = mm + 12; yy = yy - 1; End;
+
+       If ((mm == 2) And (Mod(yy, 4)==0) And 
+          ((Mod(yy, 100)!=0) Or (Mod(yy, 400)==0))
+          )
+         add = 1; /* дополнительный день в феврале */
+       Else
+         add = 0;
+       End;
+
+       If ((dd>0) And (dd<=(mj[mm]+add))) 
+         Flag = False;
+       Else
+         If (dd>0) 
+           dd = dd - mj[mm] - add; 
+           mm = mm + 1;    
+         Else
+           dd = dd + mj[mm] + add; 
+           mm = mm - 1; 
+         End
+       End;
+     End;
+     Return Date(dd, mm, yy);
+
+  ONERROR(x)
+     Return Date(0, 0, 0);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  macro DateToStr(dDat)
+  var dd,mm,yy;
+  array
+    aMonth;
+
+    aMonth(0) ="Января";
+    aMonth(1) ="Февраля";
+    aMonth(2) ="Марта";
+    aMonth(3) ="Апреля";
+    aMonth(4) ="Мая";
+    aMonth(5) ="Июня";
+    aMonth(6) ="Июля";
+    aMonth(7) ="Августа";
+    aMonth(8) ="Сентября";
+    aMonth(9) ="Октября";
+    aMonth(10)="Ноября";
+    aMonth(11)="Декабря";
+
+    datesplit(dDat,dd,mm,yy);
+    return(PadL(string(dd),2,"0")+" "+aMonth(mm-1)+" "+string(yy)+" года ");
+  end;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO iif(pCond, pTrue, pFalse)                  /* Стандартная функция IIF              */
+    If (pCond)
+      Return (pTrue);
+    Else
+      Return (pFalse);
+    End;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO ArgEQ(pArgCmp);                            /* Сравниваем I аргумент с последующими */
+    Var i = 2, 
+        v = Null;
+
+    While (GetParm(i, v)) 
+      If ( v == pArgCmp ) Return True; End;
+      i = i + 1;
+    End;
+    Return False;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO CallForArray(FuncName, a);
+    Private Var ch = StrFor(34);
+    Private Var i = 0, s = "ExecMacro2(" + ch + FuncName + ch;
+    Private Var sz, tp = 0;
+
+    If ((FuncName==Null) Or (FuncName=="")) Return Null; End;
+
+    tp = ValType(a);
+    If (tp == 15)                                  /* Ясно и ежу: ValType(V_ARRАY) = 15    */
+      sz = ASize(a);                               /* Размер массива определим ч/з ASize   */
+    ElIf (tp == 19)                                /* ValType(TArray) = 19                 */
+      sz = a.Size;                                 /* Размер TArray определим через .Size  */
+    End;
+
+    while (i<sz)
+      s = s + ", a[" + i + "]";
+      i = i + 1;
+    end;
+    s = s + ");";
+
+    return ExecExp(s);
+
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO CallMethodForArray(obj, FuncName, a);
+    Var arr = TArray, ret, i;
+    arr[0] = obj;
+    arr[1] = FuncName;
+
+    i = 0;
+    While (i<a.Size)
+      arr[i+2] = a[i];
+      i = i + 1;
+    End; 
+
+    ret = CallForArray("GenRun", arr);
+    i = 0;
+    While (i<a.Size)
+      a[i] = arr[i+2];
+      i = i + 1;
+    End; 
+    arr[0] = Null;
+    arr = Null;
+
+    Return ret;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO UpDir(ss)                                  /* Имя вышестоящего каталога            */
+    Var i = StrLen(ss)-1;
+    While (i>0) 
+      If (SubStr(ss, i, 1)=="\\") Return SubStr(ss, 1, i-1); End;
+      i = i - 1; 
+    End;
+    Return "";
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO BuildDirPath(ss);                          /* Добавляем конечный слэш, если нужно  */
+    Var so = Trim(ss);
+    If (SubStr(so, StrLen(so))!="\\") so = so + "\\"; End;
+    Return so;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO DelSub(CurDirIn, Name, IsDir, Prohod, DirIn, DirOut, cReplace) /* Подмакрос удал. файлов директории  */
+    CurDirIn = Trim(CurDirIn);
+    DirIn    = Trim(DirIn);
+
+    If (SubStr(CurDirIn, 1, 1) == "$")
+      CurDirIn = SubStr(CurDirIn, 2);
+      DirIn    = SubStr(DirIn, 2);
+
+      If (Not IsDir) lgDelFile(CurDirIn + "\\" + Name); Return; End;         /* Файл                               */
+      If (Prohod == 1)  lgDeleteDir(CurDirIn);          Return; End;         /* Каталог киляется на втором проходе */
+    Else
+      If (Not IsDir) dcDelFile(CurDirIn + "\\" + Name); Return; End;         /* Файл                               */
+      If (Prohod == 1)  dcDeleteDir(CurDirIn);          Return; End;         /* Каталог киляется на втором проходе */
+    End;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO MakeDir(name, OnServer)
+    If (OnServer == TRUE)                                                    /* На сервере создаем каталог         */
+      Return dcMakeDir(name);
+    End;
+    Return lgMakeDir(name);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO FindFile(name, OnServer);
+    If (OnServer == TRUE)                          /* На сервере                           */
+      Return dcFindFile(name);
+    End;
+    Return lgFindFile(name);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO IsLockForWrite(name, OnServer)
+    If (OnServer == TRUE)                          /* На сервере                           */
+      Return dcIsLockForWrite(name);
+    End;
+    Return lgIsLockForWrite(name);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO rslDelFile(name, OnServer)
+    If (OnServer == TRUE)                          /* На сервере                           */
+      Return dcDelFile(name);
+    End;
+    Return lgDelFile(name);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO rslRenameFile(OldName, NewName, OnServer)
+    If (OnServer == TRUE)                          /* На сервере                           */
+      Return dcRename(OldName, NewName);
+    End;
+    Return lgRename(OldName, NewName);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO ServToTerm(InName,OutName,Progr, cSize);
+    Var i = StrLen(OutName), Name;
+
+    While (SubStr(OutName,i,1)!="\\")
+      i = i - 1;
+      If (i == 0) Return; End;
+    End;
+    Name = "C:\\" + SubStr(OutName, i+1);
+    If (cSize>0)
+      lgServTerm(InName,Name,Progr);
+    Else
+      lgTermTerm(InName,Name,Progr);
+    End;
+    lgTermTerm(Name,OutName,Progr);
+    lgDelFile(Name);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO CopySub(CurDirIn, Name, IsDir, Prohod, DirIn, DirOut, cReplace, cSize) /* Подмакрос копир. ф-лов директ.*/
+    /* 
+       CurDirIn - текущий каталог. Может начинаться с $, если это терминал 
+       Name     - текущий файл.
+       IsDir    - Логический флаг "Это каталог"
+       Prohod   - Номер прохода (0 или 1)
+       DirIn    - Корневой входящий каталог
+       DirOut   - Корневой исходящий каталог
+       cReplace - Логический флаг "Заменять уже существующие файлы"
+       cSize    - Сколько файлов перегонять (dr.Size)
+    */
+
+    Var Show = True;
+    If (Prohod==1) Return; End;                    /* Второй проход для Create не нужен    */
+
+    CurDirIn = Trim(CurDirIn);
+    DirIn    = Trim(DirIn);
+    DirOut   = Trim(DirOut);
+    Name     = Trim(Name);
+
+    Var FromServ = True, ToServ = True;
+    Var InName, OutName;
+    Var diff = Trim(SubStr(CurDirIn, StrLen(dirIn)+1)); /* Вложенные подкаталоги           */
+
+    If (diff!="") DirOut   = DirOut + diff; End;
+
+    
+    If (SubStr(CurDirIn, 1, 1) == "$")             /* Пишем с консоли                      */
+      CurDirIn = SubStr(CurDirIn, 2);
+      DirIn    = SubStr(DirIn, 2);
+      FromServ = False;
+    End;
+    If (SubStr(DirOut, 1, 1) == "$")               /* Пишем на консоль                     */
+      DirOut = SubStr(DirOut, 2);
+      ToServ = False;
+    End;
+
+    InName  = CurDirIn + "\\" + Name;
+    OutName = DirOut   + "\\" + Name;
+    If (IsDir)                                     /* Попался каталог                      */
+      MakeDir(OutName, ToServ);                    /* Создаем его                          */
+      Return;
+    End;
+
+    If (FindFile(OutName, ToServ)!="")             /* Файл уже существует                  */
+      If (cReplace!=True) Return; End;             /* Ну и ладушки                         */
+      If (IsLockForWrite(OutName, ToServ)>0)       /* Файл не заблокирован                 */
+        rslDelFile(OutName, ToServ);               /* Удаляем аго                          */
+      Else                                         /* Файл заблокирован                    */
+        rslRenameFile(OutName, OutName + "_Old", ToServ); /* Переименовываем               */
+      End;
+    End;
+    If (FromServ)                                  /* Файл с сервера                       */
+      If (ToServ)                                  /* Файл с сервера на сервер             */
+        dcCopyFile(InName, OutName, Show);
+      Else /* FromServ ToTerm */                   /* Файл с сервера на терминал           */
+        ServToTerm(InName, OutName, Show, cSize);
+      End;
+    Else   /* FromTerm */                          /* Файл с терминала                     */
+      If (ToServ)                                  /* Файл с терминала на сервер           */
+        lgTermServ(InName, OutName, Show);
+      Else /* FromTerm ToTerm */                   /* Файл с терминала на терминал         */
+        lgTermTerm(InName, OutName, Show);
+      End;
+    End;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO kvnDir(DirIn,DirOut,MyFunc,cReplace);
+    Private Var 
+      arr  = TArray,                               /* Массив необработанных каталогов      */
+      arr1 = TArray,                               /* Массив имен файлов                   */
+      NextOk, i = 0, j=0, nn;
+
+    Var dr;
+
+    arr[0] = DirIn;                                /* Зри в корень.                        */
+
+    While (i<arr.Size)                             /* Пока не все каталоги обработаны      */
+      nn = arr[i] + "\\*";
+      dr = TDirList(nn,"DF");                      /* Собираем текущий каталог             */
+      j = 0;                                       /* Бежим по файлам каталога до конца    */
+      /*println("<<", nn, ">>>", dr.Name(j));*/
+      While (j<dr.Count)                           /* В каталоге есть файлы                */
+        If ((dr.Name(j)!=".") And (dr.Name(j)!="..")) /* И это действительно файлы         */
+          If (dr.IsDir(j))                         /* Упс... Каталог.                      */
+            arr[arr.Size] = arr[i] + "\\" + dr.Name(j); /* Нужно запомнить его хорошенько  */
+          End;
+          If ((MyFunc == "DelSub") Or (MyFunc == "CopySub"))
+            GenRun(this, MyFunc, StrUpr(arr[i]), dr.Name(j), dr.IsDir(j), 0,     DirIn, DirOut, cReplace, dr.Size(j), dr, j);
+          Else
+          /*        MsgBox("Будем копировать: ", dr.Name(j));*/
+            ExecMacro(MyFunc, StrUpr(arr[i]), dr.Name(j), dr.IsDir(j), 0,     DirIn, DirOut, cReplace, dr.Size(j), dr, j);
+                   /* MyFunc  CurDirIn  Name      IsDir        Prohod DirIn  DirOut  cReplace  cSize       this*/
+            /*        MsgBox("Скопировали: ", dr.Name(j));*/
+          End;
+        End;
+        j = j + 1;                                 /* Следующий элемент каталога           */
+      End;
+      i = i + 1;                                   /* Следующий каталог!                   */
+    End;
+
+    i = arr.Size-1;                                /* Готовимся ко второму проходу         */
+    While (i>-1)                                   /* В обратном порядке.                  */
+      If ((MyFunc == "DelSub") Or (MyFunc == "CopySub"))
+        GenRun(this, MyFunc, StrUpr(arr[i]), arr[i], True, 1, DirIn, DirOut, cReplace); /* Обработ. Проход 2 */
+                /* MyFunc  CurDirIn  Name IsDir Prohod DirIn DirOut cReplace cSize this */
+
+      Else
+        ExecMacro(MyFunc, StrUpr(arr[i]), arr[i], True, 1, DirIn, DirOut, cReplace); /* Обработ. Проход 2 */
+                /* MyFunc  CurDirIn  Name IsDir Prohod DirIn DirOut cReplace cSize this */
+      End;
+      i = i -1;                                    /* Следующий! В смысле, предыдущий.     */
+    End;
+    dr = Null;
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO DelDir(name);
+    kvnDir(name, "", "DelSub");
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO CopyDir(NameIn, NameOut, cReplace);
+    kvnDir(NameIn, NameOut, "CopySub", cReplace);
+  END;
+  /* ------------------------------------------------------------------------------------- */
+
+END;
+
+CLASS TkvnSelectFile
+  Var 
+    FromServ = True,           /* True - читаем от сервера, False - читаем от клиента */
+    tmp      = TkvnRsl(), 
+    arr1 : TArray,
+    arr2 : TArray, 
+    mask         , 
+    ss           ,
+    ch           ;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO InitClass
+    arr1  = TArray;
+    arr2  = TArray; 
+    mask  = "";
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO IsDirectory(cAttr)
+    Return (dcAnd(cAttr,16)==16);
+  END;
+/*
+  MACRO GetRaschir(cName)
+    Var t, ss;
+    t = Index(cName, ".");
+    If (t>0) Return (StrUpr(Trim(SubStr(cName, t+1)))); End;
+    Return "";
+  END;
+*/
+  /* ------------------------------------------------------------------------------------- */
+  MACRO UserFilter(cName, cAttr)       Return True; End;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO Filter(cName, cAttr) 
+
+    If (Not UserFilter(cName, cAttr))  Return False; End;
+
+    If (mask=="")                      Return True;  End;
+
+    If (IsDirectory(cAttr))            Return True;  End;
+
+    Return (CompareStrWithMasks(mask, StrUpr(cName)) == 0);
+  End;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO CreateList(cDir)
+    Var i = 0, NextOk, cName, cAttr;
+    arr1.Size = 0;
+    arr2.Size = 0;
+
+    cDir = tmp.Dos2Win(cDir);
+    If (FromServ)
+      NextOk = dcFindFirst(cDir + "\\*.*", cName, cAttr);
+    Else
+      NextOk = lgFindFirst(cDir + "\\*.*", cName, cAttr);
+    End;
+
+    While (NextOk)
+
+      If ((cName!=".") And (Filter(cName, cAttr)))
+        arr1[i] = ToOem(cName);
+        arr2[i] = cAttr;
+        i = i + 1;
+      End;
+      If (FromServ)
+        NextOk = dcFindNext(cName, cAttr);
+      Else
+        NextOk = lgFindNext(cName, cAttr);
+      End;
+    End;
+  END;           
+  /* ------------------------------------------------------------------------------------- */
+  MACRO GetRight(str, sym)
+    Var ln, NextOk = True, ss=str;
+    While (str!="")
+      ln = StrLen(ss);
+      If (SubStr(ss, ln, 1)==sym)
+        Return SubStr(ss,1,StrLen(ss)-1);
+      End;
+      ss = SubStr(ss,1,ln-1);
+    End;
+    Return "";
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  MACRO Select(_ss, _mask)
+    ss   = _ss;
+    ch   = 1;
+    mask = StrUpr(_mask);
+
+    If (SubStr(ss, 1, 1)=="$")
+      FromServ = False; 
+      ss = SubStr(ss, 2); 
+    End;
+
+    While (ch>=0)
+      CreateList(ss);
+      ch = Menu(arr1); 
+      If (ch>=0)              
+        If (IsDirectory(arr2[ch])) 
+          If (arr1[ch]=="..")
+            ss = GetRight(ss,"\\");
+          Else
+            ss = ss + "\\" + arr1[ch];
+          End;
+        Else         
+          ss = ss + "\\" + arr1[ch];
+          Return ss;
+        End;
+      End;
+    End;
+    Return "";
+  END;
+  /* ------------------------------------------------------------------------------------- */
+  InitClass();
+END;
+
+/* ------------------------------------------------------------------------------------------- */
+CLASS TkvnGroupForRep()
+  Var CurLevel, Report;
+
+  MACRO PrintHead(CurrentValue)             println("┌ ", CurrentValue); END;
+  MACRO PrintTail(CurrentValue, CurrentCnt) println("└ ", CurrentValue, " (", CurrentCnt, ")"); END;
+  MACRO AddUserSum(CurrentValue)            Return True;                 END;
+  MACRO ClearUserSum(CurrentValue)          Return True;                 END;
+
+END;
+
+/* ------------------------------------------------------------------------------------------- */
+CLASS TkvnEmptyGroupForRep()
+  Var CurLevel, Report;
+
+  MACRO PrintHead(CurrentValue)             END;
+  MACRO PrintTail(CurrentValue, CurrentCnt) END;
+  MACRO AddUserSum(CurrentValue)            END;
+  MACRO ClearUserSum(CurrentValue)          END;
+
+END;
+
+/* ------------------------------------------------------------------------------------------- */
+CLASS TkvnRep()
+  Private Const cnstEmpty = "Її-їЇ=?";
+
+  Var 
+    cnt, i, j, 
+    aCur, aCnt, aGr, aVal;
+  /* ----------------------------------------------------------------------------------------- */
+  MACRO Constructor()
+    aCur    = TArray; aCur.Size    = 0;
+    aCnt    = TArray; aCnt.Size    = 0;
+    aGr     = TArray; aGr.Size     = 0;
+    aVal    = TArray; aVal.Size    = 0;
+  END;
+  /* ----------------------------------------------------------------------------------------- */
+  MACRO Init()                          /* Инициализация класса                                */
+    cnt = aGr.Size-1;
+
+    j = 0;
+    While (j<=cnt)
+      aCur[j] = cnstEmpty; 
+      aVal[j] = aCur[j];
+      aCnt[j] = 0;
+      aGr[j].CurLevel = j;
+      aGr[j].Report = this;
+      j = j + 1;
+    End;
+  END;
+  /* ----------------------------------------------------------------------------------------- */
+  MACRO PrintHeads()
+    i = 1;
+    While (GetParm(i, j))
+      aVal[i-1] = j;
+      i         = i + 1;
+    End;
+
+    i = 0;
+    /*println(".PrintHeads.BeforeWhile. cnt =", cnt);*/
+    While (i<=cnt)                      /* Бежим по массиву группировок                        */
+      /*println("..PrintHeads[", i, "].InWhile, aCur[i]=", aCur[i], ", aVal[i]=", aVal[i], ">");*/
+      If (aCur[i] != aVal[i])           /* Текущее значение устарело                           */
+        j = cnt;                        /* Перерисуем все хвосты с конца                       */
+        While (j>=i)                    /* До текущего                                         */
+          If (aCur[j]!=cnstEmpty)       /* Значение участвовало в отрисовке                    */
+            aGr[j].PrintTail(aCur[j], aCnt[j]);/* Рисуем хвост                                 */
+            aCur[j] = cnstEmpty;        /* Чтобы более глубокое значение случайно не совпало   */
+          End;
+          j = j - 1;                    /* Предыдущий, поскольку хвосты отрисовываем с конца   */
+        End;
+        aCur[i] = aVal[i];              /* Устанавливаем новое текущее значение                */
+        aGr[i].PrintHead(aCur[i]);      /* Рисуем голову                                       */
+        aCnt[i] = 0;
+        /*println("..PrintHeads[", i, "]BeforeClear, aCur[i]=", aCur[i], ", aVal[i]=", aVal[i], ">", i);*/
+        aGr[i].ClearUserSum(aCur[i]);
+
+      End;
+      i = i + 1;                        /* Следующий элемент группировки                       */
+    End;
+
+    i = 0;
+    While (i<=cnt)
+      aCnt[i] = aCnt[i] + 1;
+      aGr[i].AddUserSum(aCur[i]); 
+      i = i + 1;
+    End;
+
+  END;
+  /* ----------------------------------------------------------------------------------------- */
+  MACRO PrintTails
+    i = cnt;                            /* Хвосты рисуются с конца                             */
+    While (i>=0)                        /* И до начала                                         */
+      If (aCnt[i]>0)
+        aGr[i].PrintTail(aCur[i], aCnt[i]);/* Рисуем очередной хвост                             */
+      End;
+      i = i - 1;
+    End;
+  END;
+  /* ----------------------------------------------------------------------------------------- */
+  Constructor();
+END;
+
+
+
+Var kvnRSL = TkvnRSL();
+
+
+
+/* ╔═════════════════════════════════════════════════════════════════════════════════════╗
+   ║ Примеры использования класса                                                        ║
+
+println(kvnRSL.ToLen("123", 7, ".", True));
+println(kvnRSL.ToLenCenter("123", 7, ".", True));
+println(kvnRSL.PadL("123",7,"0"));
+println(kvnRSL.PadR("123",8,"0"));
+println(kvnRSL.Right("123",2));   
+println(kvnRSL.Mask("###:###:###", 5, "\\C", "AAA", Date(01, 01, 05), "\\W"));
+println(kvnRSL.ValToType("01.12.2001", V_DATE)+1);                                                                                          
+println(kvnRSL.ValToTypeValSource("01.12.2001", Date(1, 1, 2001))+1);
+
+Var {CurDate}, cDate = {CurDate};
+println(kvnRSL.FirstDayOfMonth(cDate));
+println(kvnRSL.LastDayOfMonth(cDate));
+println(kvnRSL.GetDayName(kvnRSL.GetDayOfWeek(cDate)));
+println(kvnRSL.MonthToStrRodit(2));
+
+
+   --------------------------------------------------------------------------------------
+   println(kvnRSL.ArgEq(1, 2, 3, 4, 5, 1));
+
+   MACRO MyPrint()
+     Var i = 0, v;
+     While (GetParm(i, v))
+       print(v, " ");
+       SetParm(i, v+2);
+       i = i + 1;
+     End;
+   END;
+
+   Var a = TArray;
+   Var i = 0; 
+   While (i<10) a[i] = i; i = i + 1; End;
+   println("\nBEFORE>>", a[0]);
+   kvnRSL.CallForArray("MyPrint", a);        /* Если функция модифицирует аргументы, они вернутся в массив измененными */
+   println("\nAFTER>>", a[0]);
+   CLASS SuperTmp()
+     MACRO MyPrint1()
+       Var i = 1, v;
+       While (GetParm(i, v))
+         print(v, " ");
+         SetParm(i, v+2);
+         i = i + 1;
+       End;
+     END;
+   END;
+   Var st = SuperTmp;
+
+   println("\nBEFORE>>", a[0]);
+   kvnRSL.CallMethodForArray(st, "MyPrint1", a);
+   println("\nAFTER>>", a[0]);
+   --------------------------------------------------------------------------------------
+
+   MACRO kvnkvn(CurDirIn, Name, IsDir, Prohod, DirIn, DirOut, cReplace, cSize) /* Подмакрос копир. ф-лов директ.*/
+     If (prohod == 0)
+       println(CurDirIn, "\\", Name);
+     End;
+   End;
+
+   kvnRsl.kvnDir("$C:\\KILL", Null, "kvnkvn");
+
+   --------------------------------------------------------------------------------------
+   Var ss = TkvnSelectFile;
+   println(ss.Select("\\\\rsbank-db\\rs51\\rsbank51"));
+   println(ss.Select("$D:\\WORK", Null));
+
+   ║ Окончание примеров использования класса                                             ║
+   ╚═════════════════════════════════════════════════════════════════════════════════════╝
+*/
+
+
+
+
+
+
