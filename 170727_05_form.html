@@ -1,0 +1,75 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<title> Сайт о собаках </title>
+	</head>
+	<!-- начнем работать с телом документа -->
+	<body>
+		<!--вставляем таблицу с перечнем основных пород собак-->
+		<form name="forma zakaza" method="post" action="obrabotchik.php">
+			Введите ФИО: <br>
+			<input type="text" name="fio" size="30">
+			<br>
+			Введите пароль (максимум шесть символов):<br>
+			<input type="password" name ="pass" maxlength="6">
+			<br>
+			Введите свой e-mail: <br>
+			<input type="text" name="e-mail" size="35" value="пример: admin@zvirec.com">
+			<br>
+
+			<p> Какой диск вы хотите получить?</p>
+			<p>
+				<input name="disc" type="radio" value="cd" checked>
+				CD	<br>
+				<input name="disc" type="radio" value="dvd">
+				DVD 
+			</p>
+			<br>
+
+			<p>Какие обучающие курсы вы хотите видеть на диске?</p>
+			<input type="checkbox" name="fotoshop" value="yes" checked>
+				Курсы по Фотошопу <br>
+			<input type="checkbox" name="dreamweaver" value="yes">
+				Курсы по Adobe Dreamweaver <br>
+			<input type="checkbox" name="php" value="yes">
+				Курсы по PHP <br>
+
+			<br>
+			<p>Выберите способ доставки:</p>
+			<p>
+				<select name="dostavka" size="1">
+					<option value="srochnaya"> 				Срочная 	</option>
+					<option value="ne srochnaya" selected> 	Не срочная	</option>
+					<option value="kurierom"> 				Курьером 	</option>
+				</select>
+			</p>
+
+			<br>
+			<p>Выберите способ доставки: (multiple)</p>
+			<p>
+				<select name="dostavka" size="3" multiple >
+					<option value="srochnaya"> 		Срочная 	</option>
+					<option value="ne srochnaya">	Не срочная 	</option>
+					<option value="kurierom"> 		Курьером 	</option>
+				</select>
+			</p>
+
+			<br>
+			Введите адрес для доставки:<br>
+			<textarea name="adress" cols="45" rows="5"></textarea>
+
+			<br>
+			<input type="submit" value="Сделать заказ">
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<input type="reset" value="Отмена">
+
+			<p> type="submit"(тип-отправить), а если хотите чтоб кнопка выполняла функцию сброса то <br>
+				type="reset" . Вот и все! <br>
+				Атрибут value указывает на то, что будет написано на кнопке. <br>
+				Строка &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - это 6 пробелов подряд <br>
+				(это так называемые специальные символы html) - чтобы разделить кнопки! <br>
+			</p>
+		</form>
+	</body>
+	<!--закончили с телом документа-->
+</html>
